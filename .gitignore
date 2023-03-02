@@ -1,3 +1,5 @@
 .DS_Store
 .tmp.driveupload/
 .tmp.driveupload/
+notebooks/images/
+notebooks/.ipynb_checkpoints/
