@@ -8,7 +8,17 @@ class DeePC:
     def __init__(self, ud: np.array, yd: np.array, y_constraints: np.array, u_constraints: np.array, 
                  N: int, Tini: int, n: int, T: int, p: int, m: int,
                  Q: np.array, R: np.array) -> None:
-        
+        """
+        Initialise variables
+        args:
+            ud = Inpiut signal data
+            yd = output signal data
+            N = predicition horizon
+            n = dimesnion of system
+            p = output signla dimension
+            m = input signal dimension
+        """
+
         self.T = T
         self.Tini = Tini
         self.n = n 
@@ -39,11 +49,29 @@ class DeePC:
         self.g = cp.Variable(self.T-self.Tini-self.N+1)
         self.y = cp.Variable(self.N*self.p)
         self.sig_y = cp.Variable(self.Tini*self.p)
+
+        # Regularization Variables
+        PI = np.vstack([self.Up, self.Yp, self.Uf])
+        PI = np.linalg.pinv(PI)@PI
+        I = np.eye(PI.shape[0])
+        self.PI = I - PI
         
     
-    def setup(self, ref: np.array, u_ini: np.array, y_ini: np.array, lam_g=None, lam_y=None) -> None:
+    def setup(self, ref: np.array, u_ini: np.array, y_ini: np.array, lam_g1=None, lam_g2=None, lam_y=None) -> None:
+        """
+        Set up solver Constraints and Cost Function.
+        Also used in the loop during sim to update u_ini, y_ini, reference and regularizers
+        args:
+            ref = reference signal
+            u_ini = initial input trajectory
+            y_ini = initial output trajectory
+            lam_g1, lam_g2 = regularization params for nonlinear systems
+            lam_y = regularization params for stochastic systems
+        """
+
         self.lam_y = lam_y
-        self.lam_g = lam_g
+        self.lam_g1 = lam_g1
+        self.lam_g2 = lam_g2
         
         self.constraints = [
             self.Up@self.g == u_ini,
@@ -55,16 +83,27 @@ class DeePC:
         ]
 
         self.cost = cp.quad_form(self.y-ref,self.Q) + cp.quad_form(self.u,self.R)
+
         if self.lam_y != None:
-            self.cost += cp.sum_squares(self.sig_y)*self.lam_y
+            self.cost += cp.norm1(self.sig_y)*self.lam_y
             self.constraints[1] = self.Yp@self.g == y_ini + self.sig_y
         else:
             self.constraints[1] = self.Yp@self.g == y_ini
 
+        if self.lam_g1 != None or self.lam_g2 != None:
+            self.cost += cp.sum_squares(self.PI@self.g)*lam_g1 + cp.norm1(self.g)*lam_g1
+            
 
-    def solve(self) -> np.array:
+    def solve(self, verbose=False, solver=cp.OSQP) -> np.array:
+        """
+        Call once solver is setup with relevenat parameters.
+        Returns the first action of input sequence.
+        args:
+            solver = cvxpy solver, usually use OSQP or ECOS
+            verbose = bool for printing status of solver
+        """
         prob = cp.Problem(cp.Minimize(self.cost), self.constraints)
-        prob.solve(solver=cp.OSQP, verbose=False)
+        prob.solve(solver=solver, verbose=verbose)
         action = prob.variables()[1].value[:self.m]
         return action
 
