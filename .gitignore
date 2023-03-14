@@ -1,5 +1,6 @@
 .DS_Store
 .tmp.driveupload/
-.tmp.driveupload/
+.tmp.drivedownload/
 notebooks/images/
 notebooks/.ipynb_checkpoints/
+notebooks/__pycache__
