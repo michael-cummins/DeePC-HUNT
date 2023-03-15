@@ -4,3 +4,4 @@
 notebooks/images/
 notebooks/.ipynb_checkpoints/
 notebooks/__pycache__
+.vscode
