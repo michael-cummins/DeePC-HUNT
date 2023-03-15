@@ -1,7 +1,7 @@
 .DS_Store
 .tmp.driveupload/
 .tmp.drivedownload/
-notebooks/images/
-notebooks/.ipynb_checkpoints/
-notebooks/__pycache__
+src/images/
+src/.ipynb_checkpoints/
+src/__pycache__
 .vscode

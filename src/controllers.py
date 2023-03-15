@@ -1,4 +1,4 @@
-from deepc_utils import block_hankel
+from controller_utils import block_hankel
 import numpy as np
 import cvxpy as cp
 
@@ -8,6 +8,7 @@ class DeePC:
     def __init__(self, ud: np.array, yd: np.array, y_constraints: np.array, u_constraints: np.array, 
                  N: int, Tini: int, n: int, T: int, p: int, m: int,
                  Q: np.array, R: np.array) -> None:
+       
         """
         Initialise variables
         args:
@@ -58,9 +59,10 @@ class DeePC:
         
     
     def setup(self, ref: np.array, u_ini: np.array, y_ini: np.array, lam_g1=None, lam_g2=None, lam_y=None) -> None:
+       
         """
-        Set up solver Constraints and Cost Function.
-        Also used in the loop during sim to update u_ini, y_ini, reference and regularizers
+        Set up controller constraints and cost function.
+        Also used online during sim to update u_ini, y_ini, reference and regularizers
         args:
             ref = reference signal
             u_ini = initial input trajectory
@@ -72,40 +74,46 @@ class DeePC:
         self.lam_y = lam_y
         self.lam_g1 = lam_g1
         self.lam_g2 = lam_g2
-        
-        self.constraints = [
-            self.Up@self.g == u_ini,
-            None,
-            self.Uf@self.g == self.u,
-            self.Yf@self.g == self.y,
-            cp.abs(self.u) <= self.u_constraints,
-            cp.abs(self.y) <= self.y_constraints
-        ]
 
         self.cost = cp.quad_form(self.y-ref,self.Q) + cp.quad_form(self.u,self.R)
 
         if self.lam_y != None:
             self.cost += cp.norm1(self.sig_y)*self.lam_y
-            self.constraints[1] = self.Yp@self.g == y_ini + self.sig_y
+            self.constraints = [
+                self.Up@self.g == u_ini,
+                self.Yp@self.g == y_ini + self.sig_y,
+                self.Uf@self.g == self.u,
+                self.Yf@self.g == self.y,
+                cp.abs(self.u) <= self.u_constraints,
+                cp.abs(self.y) <= self.y_constraints
+            ]
         else:
-            self.constraints[1] = self.Yp@self.g == y_ini
+            self.constraints = [
+                self.Up@self.g == u_ini,
+                self.Yp@self.g == y_ini,
+                self.Uf@self.g == self.u,
+                self.Yf@self.g == self.y,
+                cp.abs(self.u) <= self.u_constraints,
+                cp.abs(self.y) <= self.y_constraints
+            ]
 
         if self.lam_g1 != None or self.lam_g2 != None:
             self.cost += cp.sum_squares(self.PI@self.g)*lam_g1 + cp.norm1(self.g)*lam_g1
             
 
     def solve(self, verbose=False, solver=cp.OSQP) -> np.array:
+        
         """
-        Call once solver is setup with relevenat parameters.
+        Call once the controller is set up with relevenat parameters.
         Returns the first action of input sequence.
         args:
             solver = cvxpy solver, usually use OSQP or ECOS
             verbose = bool for printing status of solver
         """
+       
         prob = cp.Problem(cp.Minimize(self.cost), self.constraints)
         prob.solve(solver=solver, verbose=verbose)
         action = prob.variables()[1].value[:self.m]
         return action
 
 
-        
