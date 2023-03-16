@@ -101,7 +101,7 @@ class DeePC:
             self.cost += cp.sum_squares(self.PI@self.g)*lam_g1 + cp.norm1(self.g)*lam_g1
             
 
-    def solve(self, verbose=False, solver=cp.OSQP) -> np.array:
+    def solve(self, verbose=False, solver=cp.OSQP, max_iter=10000) -> np.array:
         
         """
         Call once the controller is set up with relevenat parameters.
@@ -112,7 +112,7 @@ class DeePC:
         """
        
         prob = cp.Problem(cp.Minimize(self.cost), self.constraints)
-        prob.solve(solver=solver, verbose=verbose)
+        prob.solve(solver=solver, verbose=verbose, max_iter=max_iter)
         action = prob.variables()[1].value[:self.m]
         return action
 
