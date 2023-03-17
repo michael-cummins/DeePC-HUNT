@@ -1,0 +1,7 @@
+.DS_Store
+.tmp.driveupload/
+.tmp.drivedownload/
+src/images/
+src/.ipynb_checkpoints/
+src/__pycache__
+.vscode
