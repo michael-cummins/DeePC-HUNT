@@ -6,8 +6,7 @@ import cvxpy as cp
 class DeePC:
 
     def __init__(self, ud: np.array, yd: np.array, y_constraints: np.array, u_constraints: np.array, 
-                 N: int, Tini: int, n: int, T: int, p: int, m: int,
-                 Q: np.array, R: np.array) -> None:
+                 N: int, Tini: int, n: int, T: int, p: int, m: int) -> None:
        
         """
         Initialise variables
@@ -28,8 +27,6 @@ class DeePC:
         self.m = m
         self.y_constraints = y_constraints
         self.u_constraints = u_constraints
-        self.Q = np.kron(np.eye(N), Q)
-        self.R = np.kron(np.eye(N), R)
 
         # Check for full row rank
         H = block_hankel(w=ud.reshape((m*T,)), L=Tini+N+n, d=m)
@@ -58,7 +55,8 @@ class DeePC:
         self.PI = I - PI
         
     
-    def setup(self, ref: np.array, u_ini: np.array, y_ini: np.array, lam_g1=None, lam_g2=None, lam_y=None) -> None:
+    def setup(self, ref: np.array, u_ini: np.array, y_ini: np.array, Q : np.array, R : np.array,
+               lam_g1=None, lam_g2=None, lam_y=None) -> None:
        
         """
         Set up controller constraints and cost function.
@@ -74,7 +72,8 @@ class DeePC:
         self.lam_y = lam_y
         self.lam_g1 = lam_g1
         self.lam_g2 = lam_g2
-
+        self.Q = np.kron(np.eye(self.N), Q)
+        self.R = np.kron(np.eye(self.N), R)
         self.cost = cp.quad_form(self.y-ref,self.Q) + cp.quad_form(self.u,self.R)
 
         if self.lam_y != None:
