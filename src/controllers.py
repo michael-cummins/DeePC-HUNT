@@ -109,10 +109,11 @@ class DeePC:
             solver = cvxpy solver, usually use OSQP or ECOS
             verbose = bool for printing status of solver
         """
-       
+
         prob = cp.Problem(cp.Minimize(self.cost), self.constraints)
-        prob.solve(solver=solver, verbose=verbose, max_iter=max_iter)
+        prob.solve(solver=solver, verbose=verbose)
         action = prob.variables()[1].value[:self.m]
-        return action
+        g = prob.variables()[2].value # For imitation loss
+        return action, g
 
 
