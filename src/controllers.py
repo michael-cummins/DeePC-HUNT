@@ -133,7 +133,7 @@ class DDeePC(nn.Module):
     def __init__(self, ud: np.array, yd: np.array, y_constraints: np.array, u_constraints: np.array, 
                  N: int, Tini: int, T: int, p: int, m: int,
                  stochastic : bool, linear : bool,
-                 q=None, r=None) -> None:
+                 q=None, r=None, lam_y=None, lam_g1=None, lam_g2=None) -> None:
         super().__init__()
 
         self.T = T
@@ -155,12 +155,20 @@ class DDeePC(nn.Module):
             self.r = r
         else : 
             self.r = Parameter(torch.randn(size=(3,))*0.1+1)
+
         if self.stochastic:
-            self.lam_y = Parameter(torch.randn((1,))*0.1+1)
+            if isinstance(lam_y, torch.Tensor):
+                self.lam_y = lam_y 
+            else:
+                self.lam_y = Parameter(torch.randn((1,))*0.1+1)
         else: self.lam_y = 0 # Initialised but won't be used
+
         if not self.linear:
-            self.lam_g1 = Parameter(torch.randn((1,))*0.1 + 1)
-            self.lam_g2 = Parameter(torch.randn((1,))*0.1 + 1)
+            if isinstance(lam_g1, torch.Tensor) and isinstance(lam_g2, torch.Tensor):
+                self.lam_g1, self.lam_g2 = lam_g1, lam_g2
+            else:
+                self.lam_g1 = Parameter(torch.randn((1,))*0.1 + 1)
+                self.lam_g2 = Parameter(torch.randn((1,))*0.1 + 1)
         else: self.lam_g1, self.lam_g2 = 0, 0 # Initialised but won't be used
 
         # Check for full row rank
