@@ -5,3 +5,4 @@ images/
 src/.ipynb_checkpoints/
 src/__pycache__
 .vscode
+.pytest_cache/
