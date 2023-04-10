@@ -9,6 +9,10 @@ import cvxpy as cp
 
 class DeePC:
 
+    """
+    Vanilla regularized DeePC module
+    """
+
     def __init__(self, ud: np.array, yd: np.array, y_constraints: np.array, u_constraints: np.array, 
                  N: int, Tini: int, n: int, T: int, p: int, m: int) -> None:
        
@@ -133,8 +137,36 @@ class DDeePC(nn.Module):
     def __init__(self, ud: np.array, yd: np.array, y_constraints: np.array, u_constraints: np.array, 
                  N: int, Tini: int, T: int, p: int, m: int,
                  stochastic : bool, linear : bool,
-                 q=None, r=None, lam_y=None, lam_g1=None, lam_g2=None) -> None:
+                 q=None, r=None, lam_y=None, lam_g1=None, lam_g2=None):
         super().__init__()
+
+        """
+        Initialise differentiable DeePC
+        args:
+            - ud : time series vector of input signals 
+            - yd : time series vector of output signals 
+            - y_constraints : State-wise Constraints on output signal
+            - u_constraints : State-wise Constraints on input signal
+            - N : Future Time horizon
+            - Tini : Initial time horizon
+            - T : Length of data
+            - p : Dimension of output signal
+            - m : Dimension of input signal
+
+            - stochastic : Set true if noise if output signals contain noise
+            - linear : Set true if input and putput signals are collected from a linear system
+
+            - q : vector of diagonal elemetns of Q,
+                if passed as none -> randomly initialise as torch parameter from N(1, 0.1) in Rp
+            - r : vector of diagonal elemetns of R,
+                if passed as none -> randomly initialise as torch parameter from N(1, 0.1) in Rm
+            - lam_y : regularization paramter for sig_y 
+                    -> if left as none, randomly initialise as torch parameter from N(1, 0.1)
+            - lam_g1 : regularization paramter for sum_squares regularization on g 
+                    -> if left as none, randomly initialise as torch parameter from N(1, 0.1)
+            - lam_g2 : regularization paramter for norm1 regularization on g 
+                    -> if left as none, randomly initialise as torch parameter from N(1, 0.1)
+        """
 
         self.T = T
         self.Tini = Tini
@@ -156,14 +188,14 @@ class DDeePC(nn.Module):
         else : 
             self.r = Parameter(torch.randn(size=(3,))*0.1+1)
 
-        if self.stochastic:
+        if stochastic:
             if isinstance(lam_y, torch.Tensor):
                 self.lam_y = lam_y 
             else:
-                self.lam_y = Parameter(torch.randn((1,))*0.1+1)
+                self.lam_y = Parameter(torch.randn((1,))*0.1 + 1)
         else: self.lam_y = 0 # Initialised but won't be used
 
-        if not self.linear:
+        if not linear:
             if isinstance(lam_g1, torch.Tensor) and isinstance(lam_g2, torch.Tensor):
                 self.lam_g1, self.lam_g2 = lam_g1, lam_g2
             else:
@@ -192,7 +224,7 @@ class DDeePC(nn.Module):
         self.u = cp.Variable(N*m)
         sig_y = cp.Variable(self.Tini*self.p)
 
-        # Constant for regularization on G
+        # Constant for sum_squares regularization on G
         PI = np.vstack([self.Up, self.Yp, self.Uf])
         PI = np.linalg.pinv(PI)@PI
         I = np.eye(PI.shape[0])
@@ -215,7 +247,7 @@ class DDeePC(nn.Module):
             cost += cp.norm1(sig_y)*l_y
             assert cost.is_dpp()
             constraints = [
-                e == self.y - ref,
+                e == self.y - ref,  # necessary for paramaterized programming
                 self.Up@g == u_ini,
                 self.Yp@g == y_ini + sig_y,
                 self.Uf@g == self.u,
@@ -253,10 +285,25 @@ class DDeePC(nn.Module):
 
     def forward(self, ref: torch.Tensor, u_ini: torch.Tensor, y_ini: torch.Tensor) -> torch.Tensor:
 
+        """
+        Forward call
+        args :
+            - ref : Reference trajectory 
+            - u_ini : Initial input signal
+            - y_ini : Initial Output signal
+
+        Returns : 
+            input : optimal input signal
+            output : optimal output signal
+            cost : optimal cost
+        """
+
+        # Construct Q and R matrices 
         Q = torch.diag(torch.kron(torch.ones(self.N), torch.sqrt(self.q)))
         R = torch.diag(torch.kron(torch.ones(self.N), torch.sqrt(self.r)))
         params = [Q, R, u_ini, y_ini, ref]
 
+        # Add paramters and system
         if not self.linear:
             params.append(self.lam_g1)
             params.append(self.lam_g2)
@@ -266,4 +313,6 @@ class DDeePC(nn.Module):
         out = self.QP_layer(*params)
         input, output = out[2], out[3]
 
-        return input, output
+        traj_cost = input.T @ R @ input + (output - ref).T @ Q @ (output - ref)
+
+        return input, output, traj_cost
