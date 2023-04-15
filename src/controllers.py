@@ -126,6 +126,17 @@ class DeePC:
         g = prob.variables()[2].value # For imitation loss
         return action
 
+class Clamp(torch.autograd.Function):
+    """
+    https://discuss.pytorch.org/t/regarding-clamped-learnable-parameter/58474/4
+    """
+    @staticmethod
+    def forward(ctx, input):
+        return input.clamp(min=0, max=100000) # the value in iterative = 2
+
+    @staticmethod
+    def backward(ctx, grad_output):
+        return grad_output.clone()
 
 
 class DDeePC(nn.Module):
@@ -135,7 +146,7 @@ class DDeePC(nn.Module):
     """
 
     def __init__(self, ud: np.array, yd: np.array, y_constraints: np.array, u_constraints: np.array, 
-                 N: int, Tini: int, T: int, p: int, m: int,
+                 N: int, Tini: int, T: int, p: int, m: int, n_batch: int,
                  stochastic : bool, linear : bool,
                  q=None, r=None, lam_y=None, lam_g1=None, lam_g2=None):
         super().__init__()
@@ -177,8 +188,10 @@ class DDeePC(nn.Module):
         self.u_constraints = u_constraints
         self.stochastic = stochastic
         self.linear = linear
+        self.n_batch = n_batch
 
         # Initialise torch parameters
+        clamper = Clamp()
         if isinstance(q, torch.Tensor):
             self.q = q
         else : 
@@ -192,7 +205,7 @@ class DDeePC(nn.Module):
             if isinstance(lam_y, torch.Tensor):
                 self.lam_y = lam_y 
             else:
-                self.lam_y = Parameter(torch.randn((1,))*0.1 + 1)
+                self.lam_y = Parameter(torch.randn((1,))*0.1 + 100)
         else: self.lam_y = 0 # Initialised but won't be used
 
         if not linear:
@@ -279,7 +292,7 @@ class DDeePC(nn.Module):
         if stochastic:
             variables.append(sig_y)
             params.append(l_y)
-
+        
         self.QP_layer = CvxpyLayer(problem=problem, parameters=params, variables=variables)
 
 
@@ -297,6 +310,10 @@ class DDeePC(nn.Module):
             output : optimal output signal
             cost : optimal cost
         """
+        clamper = Clamp()
+        self.lam_y.data = clamper.apply(self.lam_y)
+        # for param in self.parameters():
+        #     clamper.apply(param)
 
         # Construct Q and R matrices 
         Q = torch.diag(torch.kron(torch.ones(self.N), torch.sqrt(self.q)))
