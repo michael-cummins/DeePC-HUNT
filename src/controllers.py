@@ -191,21 +191,21 @@ class DDeePC(nn.Module):
         self.n_batch = n_batch
 
         # Initialise torch parameters
-        clamper = Clamp()
         if isinstance(q, torch.Tensor):
             self.q = q
         else : 
-            self.q = Parameter(torch.randn(size=(3,))*0.1+1)
+            self.q = Parameter(torch.randn(size=(3,)) + 10)
+        
         if isinstance(r, torch.Tensor):
             self.r = r
         else : 
-            self.r = Parameter(torch.randn(size=(3,))*0.1+1)
+            self.r = Parameter(torch.randn(size=(3,)) + 10)
 
         if stochastic:
             if isinstance(lam_y, torch.Tensor):
                 self.lam_y = lam_y 
             else:
-                self.lam_y = Parameter(torch.randn((1,))*0.1 + 100)
+                self.lam_y = Parameter(torch.randn((1,)) + 10)
         else: self.lam_y = 0 # Initialised but won't be used
 
         if not linear:
@@ -310,10 +310,10 @@ class DDeePC(nn.Module):
             output : optimal output signal
             cost : optimal cost
         """
+
+        # Set lam_y to 0 if negative 
         clamper = Clamp()
         self.lam_y.data = clamper.apply(self.lam_y)
-        # for param in self.parameters():
-        #     clamper.apply(param)
 
         # Construct Q and R matrices 
         Q = torch.diag(torch.kron(torch.ones(self.N), torch.sqrt(self.q)))
