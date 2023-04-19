@@ -114,7 +114,7 @@ class DeePC:
         Call once the controller is set up with relevenat parameters.
         Returns the first action of input sequence.
         args:
-            solver = cvxpy solver, usually use OSQP or ECOS
+            solver = cvxpy solver, usually use MOSEK
             verbose = bool for printing status of solver
         """
 
@@ -123,8 +123,8 @@ class DeePC:
         assert prob.is_dcp()
         prob.solve(solver=solver, verbose=verbose)
         action = prob.variables()[1].value[:self.m]
-        g = prob.variables()[2].value # For imitation loss
-        return action
+        obs = prob.variables()[0].value # For imitation loss
+        return action, obs
 
 class Clamp(torch.autograd.Function):
     """
@@ -270,7 +270,7 @@ class DDeePC(nn.Module):
             ]
         else:
             constraints = [
-                e == self.y - ref,
+                e == self.y - ref,  # necessary for paramaterized programming
                 self.Up@g == u_ini,
                 self.Yp@g == y_ini,
                 self.Uf@g == self.u,
@@ -292,7 +292,7 @@ class DDeePC(nn.Module):
         if stochastic:
             variables.append(sig_y)
             params.append(l_y)
-        
+
         self.QP_layer = CvxpyLayer(problem=problem, parameters=params, variables=variables)
 
 
@@ -313,8 +313,9 @@ class DDeePC(nn.Module):
 
         # Set lam_y to 0 if negative 
         clamper = Clamp()
-        self.lam_y.data = clamper.apply(self.lam_y)
-
+        if self.stochastic:
+            self.lam_y.data = clamper.apply(self.lam_y)
+        self.q.data = clamper.apply(self.q)
         # Construct Q and R matrices 
         Q = torch.diag(torch.kron(torch.ones(self.N), torch.sqrt(self.q)))
         R = torch.diag(torch.kron(torch.ones(self.N), torch.sqrt(self.r)))
