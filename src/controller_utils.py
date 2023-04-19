@@ -1,5 +1,6 @@
 import numpy as np
 import matplotlib.pyplot as plt
+import torch
 
 def block_hankel(w: np.array, L: int, d: int) -> np.array:
     """
@@ -16,3 +17,15 @@ def block_hankel(w: np.array, L: int, d: int) -> np.array:
     for i in range(0, T-L+1):
         H[:,i] = w[d*i:d*(L+i)]
     return H
+
+class Clamp(torch.autograd.Function):
+    """
+    https://discuss.pytorch.org/t/regarding-clamped-learnable-parameter/58474/4
+    """
+    @staticmethod
+    def forward(ctx, input):
+        return input.clamp(min=1e-4, max=1e5) # the value in iterative = 2
+
+    @staticmethod
+    def backward(ctx, grad_output):
+        return grad_output.clone()

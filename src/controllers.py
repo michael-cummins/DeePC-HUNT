@@ -1,4 +1,4 @@
-from controller_utils import block_hankel
+from controller_utils import block_hankel, Clamp
 import torch
 import torch.nn as nn
 from torch.nn.parameter import Parameter
@@ -126,18 +126,6 @@ class DeePC:
         obs = prob.variables()[0].value # For imitation loss
         return action, obs
 
-class Clamp(torch.autograd.Function):
-    """
-    https://discuss.pytorch.org/t/regarding-clamped-learnable-parameter/58474/4
-    """
-    @staticmethod
-    def forward(ctx, input):
-        return input.clamp(min=0, max=100000) # the value in iterative = 2
-
-    @staticmethod
-    def backward(ctx, grad_output):
-        return grad_output.clone()
-
 
 class DDeePC(nn.Module):
 
@@ -194,18 +182,18 @@ class DDeePC(nn.Module):
         if isinstance(q, torch.Tensor):
             self.q = q
         else : 
-            self.q = Parameter(torch.randn(size=(3,)) + 10)
+            self.q = Parameter(torch.randn(size=(3,)) + 100)
         
         if isinstance(r, torch.Tensor):
             self.r = r
         else : 
-            self.r = Parameter(torch.randn(size=(3,)) + 10)
+            self.r = Parameter(torch.randn(size=(3,)) + 100)
 
         if stochastic:
             if isinstance(lam_y, torch.Tensor):
                 self.lam_y = lam_y 
             else:
-                self.lam_y = Parameter(torch.randn((1,)) + 10)
+                self.lam_y = Parameter(torch.randn((1,)) + 100)
         else: self.lam_y = 0 # Initialised but won't be used
 
         if not linear:
@@ -315,7 +303,13 @@ class DDeePC(nn.Module):
         clamper = Clamp()
         if self.stochastic:
             self.lam_y.data = clamper.apply(self.lam_y)
+        if not self.linear:
+            self.lam_g1.data = clamper.apply(self.lam_g1)
+            self.lam_g2.data = clamper.apply(self.lam_g2)
+
         self.q.data = clamper.apply(self.q)
+        self.r.data = clamper.apply(self.r)
+
         # Construct Q and R matrices 
         Q = torch.diag(torch.kron(torch.ones(self.N), torch.sqrt(self.q)))
         R = torch.diag(torch.kron(torch.ones(self.N), torch.sqrt(self.r)))
