@@ -193,15 +193,15 @@ class DDeePC(nn.Module):
             if isinstance(lam_y, torch.Tensor):
                 self.lam_y = lam_y 
             else:
-                self.lam_y = Parameter(torch.randn((1,)) + 100)
+                self.lam_y = Parameter(torch.randn((1,))*0.001 + 0.01)
         else: self.lam_y = 0 # Initialised but won't be used
 
         if not linear:
             if isinstance(lam_g1, torch.Tensor) and isinstance(lam_g2, torch.Tensor):
                 self.lam_g1, self.lam_g2 = lam_g1, lam_g2
             else:
-                self.lam_g1 = Parameter(torch.randn((1,))*0.1 + 1)
-                self.lam_g2 = Parameter(torch.randn((1,))*0.1 + 1)
+                self.lam_g1 = Parameter(torch.randn((1,))*0.1 + 100)
+                self.lam_g2 = Parameter(torch.randn((1,))*0.1 + 100)
         else: self.lam_g1, self.lam_g2 = 0, 0 # Initialised but won't be used
 
         # Check for full row rank
