@@ -187,26 +187,26 @@ class DHDeePC(nn.Module):
         if isinstance(q, torch.Tensor):
             self.q = q
         else : 
-            self.q = Parameter(torch.randn(size=(self.p*N,)) + 10)
+            self.q = Parameter(torch.randn(size=(self.p*N,))*0.1 + 10)
         
         if isinstance(r, torch.Tensor):
             self.r = r
         else : 
-            self.r = Parameter(torch.randn(size=(self.m*self.N,)) + 10)
+            self.r = Parameter(torch.randn(size=(self.m*self.N,))*0.1 + 10)
 
         if stochastic:
             if isinstance(lam_y, torch.Tensor):
                 self.lam_y = lam_y 
             else:
-                self.lam_y = Parameter(torch.randn((1,)) + 10)
+                self.lam_y = Parameter(torch.randn((1,))*0.1 + 10)
         else: self.lam_y = 0 # Initialised but won't be used
 
         if not linear:
             if isinstance(lam_g1, torch.Tensor) and isinstance(lam_g2, torch.Tensor):
                 self.lam_g1, self.lam_g2 = lam_g1, lam_g2
             else:
-                self.lam_g1 = Parameter(torch.randn((1,)) + 10)
-                self.lam_g2 = Parameter(torch.randn((1,)) + 10)
+                self.lam_g1 = Parameter(torch.randn((1,))*0.1 + 10)
+                self.lam_g2 = Parameter(torch.randn((1,))*0.1 + 10)
         else: self.lam_g1, self.lam_g2 = 0, 0 # Initialised but won't be used
 
         # Check for full row rank
@@ -410,26 +410,26 @@ class DDeePC(nn.Module):
         if isinstance(q, torch.Tensor):
             self.q = q
         else : 
-            self.q = Parameter(torch.randn(size=(3,)) + 100)
+            self.q = Parameter(torch.randn(size=(self.p,)) + 10)
         
         if isinstance(r, torch.Tensor):
             self.r = r
         else : 
-            self.r = Parameter(torch.randn(size=(3,)) + 100)
+            self.r = Parameter(torch.randn(size=(self.m,)) + 10)
 
         if stochastic:
             if isinstance(lam_y, torch.Tensor):
                 self.lam_y = lam_y 
             else:
-                self.lam_y = Parameter(torch.randn((1,))*0.001 + 0.01)
+                self.lam_y = Parameter(torch.randn((1,)) + 10)
         else: self.lam_y = 0 # Initialised but won't be used
 
         if not linear:
             if isinstance(lam_g1, torch.Tensor) and isinstance(lam_g2, torch.Tensor):
                 self.lam_g1, self.lam_g2 = lam_g1, lam_g2
             else:
-                self.lam_g1 = Parameter(torch.randn((1,))*0.1 + 100)
-                self.lam_g2 = Parameter(torch.randn((1,))*0.1 + 100)
+                self.lam_g1 = Parameter(torch.randn((1,)) + 10)
+                self.lam_g2 = Parameter(torch.randn((1,)) + 10)
         else: self.lam_g1, self.lam_g2 = 0, 0 # Initialised but won't be used
 
         # Check for full row rank
@@ -482,8 +482,8 @@ class DDeePC(nn.Module):
                 self.Uf@g == self.u,
                 self.Yf@g == self.y,
                 cp.abs(self.u) <= self.u_constraints,
-                cp.abs(self.y) <= self.y_constraints,
-                self.y[-self.p:] == ref[-self.p:]
+                cp.abs(self.y) <= self.y_constraints
+                # self.y[-self.p:] == ref[-self.p:]
             ]
         else:
             constraints = [
@@ -493,8 +493,9 @@ class DDeePC(nn.Module):
                 self.Uf@g == self.u,
                 self.Yf@g == self.y,
                 cp.abs(self.u) <= self.u_constraints,
-                cp.abs(self.y) <= self.y_constraints,
-                self.y[-self.p:] == ref[-self.p:]
+                cp.abs(self.y) <= self.y_constraints
+                # self.y[-self.p:] == ref[-self.p:]
+
             ]
         
         # Initialise optimization problem
@@ -554,6 +555,6 @@ class DDeePC(nn.Module):
         out = self.QP_layer(*params)
         input, output = out[2], out[3]
 
-        traj_cost = input.T @ R @ input + (output - ref).T @ Q @ (output - ref)
+        # traj_cost = input.T @ R @ input + (output - ref).T @ Q @ (output - ref)
 
-        return input, output, traj_cost
+        return input, output
