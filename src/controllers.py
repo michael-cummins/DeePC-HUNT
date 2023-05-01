@@ -421,7 +421,7 @@ class DDeePC(nn.Module):
             if isinstance(lam_y, torch.Tensor):
                 self.lam_y = lam_y 
             else:
-                self.lam_y = Parameter(torch.randn((1,)) + 10)
+                self.lam_y = Parameter(torch.randn((1,))*0.001 + 0.01)
         else: self.lam_y = 0 # Initialised but won't be used
 
         if not linear:
