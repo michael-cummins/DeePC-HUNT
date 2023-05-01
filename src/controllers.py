@@ -428,8 +428,8 @@ class DDeePC(nn.Module):
             if isinstance(lam_g1, torch.Tensor) and isinstance(lam_g2, torch.Tensor):
                 self.lam_g1, self.lam_g2 = lam_g1, lam_g2
             else:
-                self.lam_g1 = Parameter(torch.randn((1,)) + 10)
-                self.lam_g2 = Parameter(torch.randn((1,)) + 10)
+                self.lam_g1 = Parameter(torch.randn((1,))*0.1 + 1)
+                self.lam_g2 = Parameter(torch.randn((1,))*0.1 + 1)
         else: self.lam_g1, self.lam_g2 = 0, 0 # Initialised but won't be used
 
         # Check for full row rank
@@ -482,8 +482,8 @@ class DDeePC(nn.Module):
                 self.Uf@g == self.u,
                 self.Yf@g == self.y,
                 cp.abs(self.u) <= self.u_constraints,
-                cp.abs(self.y) <= self.y_constraints
-                # self.y[-self.p:] == ref[-self.p:]
+                cp.abs(self.y) <= self.y_constraints,
+                self.y[-self.p:] == ref[-self.p:]
             ]
         else:
             constraints = [
@@ -493,9 +493,8 @@ class DDeePC(nn.Module):
                 self.Uf@g == self.u,
                 self.Yf@g == self.y,
                 cp.abs(self.u) <= self.u_constraints,
-                cp.abs(self.y) <= self.y_constraints
-                # self.y[-self.p:] == ref[-self.p:]
-
+                cp.abs(self.y) <= self.y_constraints,
+                self.y[-self.p:] == ref[-self.p:]
             ]
         
         # Initialise optimization problem
@@ -529,7 +528,7 @@ class DDeePC(nn.Module):
             output : optimal output signal
             cost : optimal cost
         """
-
+        
         # Set lam_y to 0 if negative 
         if self.stochastic:
             self.lam_y.data = self.clamper.apply(self.lam_y)
@@ -541,8 +540,13 @@ class DDeePC(nn.Module):
         self.r.data = self.clamper.apply(self.r)
 
         # Construct Q and R matrices 
-        Q = torch.diag(torch.kron(torch.ones(self.N), torch.sqrt(self.q)))
-        R = torch.diag(torch.kron(torch.ones(self.N), torch.sqrt(self.r)))
+        if u_ini.ndim > 1 or y_ini.ndim > 1 or ref.ndim > 1:
+            Q = torch.diag(torch.kron(torch.ones(self.N), torch.sqrt(self.q))).repeat(self.n_batch, 1, 1)
+            R = torch.diag(torch.kron(torch.ones(self.N), torch.sqrt(self.r))).repeat(self.n_batch, 1, 1)
+        else :
+            Q = torch.diag(torch.kron(torch.ones(self.N), torch.sqrt(self.q)))
+            R = torch.diag(torch.kron(torch.ones(self.N), torch.sqrt(self.r)))
+
         params = [Q, R, u_ini, y_ini, ref]
 
         # Add paramters and system
@@ -552,9 +556,8 @@ class DDeePC(nn.Module):
         if self.stochastic:
             params.append(self.lam_y)
 
-        out = self.QP_layer(*params)
+        out = self.QP_layer(*params, solver_args={"solve_method": "ECOS"})
         input, output = out[2], out[3]
 
-        # traj_cost = input.T @ R @ input + (output - ref).T @ Q @ (output - ref)
-
         return input, output
+

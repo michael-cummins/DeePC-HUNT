@@ -5,6 +5,29 @@ from mpc import util
 from torch import nn
 from torch.autograd import Variable
 
+def sample_initial_signal(Tini : int, p : int, m : int, batch : int, ud : np.array, yd : np.array) -> torch.Tensor:
+    """
+    Samples initial signal trajectory from system data
+    args:
+        Tini = Initial time
+        p = Dimension of output signal
+        m = Dimension of input signal
+        batch = nunmber of batches
+        ud  = System input data
+        yd = system output data
+    """
+    index = np.random.uniform(size=(batch,), low=0, high=15).astype(np.uint8)
+    if ud.ndim > 1:
+        sampled_uini = np.array([ud[ind:Tini + ind, :].reshape((Tini*m,)) for ind in index])
+    else:
+        sampled_uini = np.array([ud[ind:Tini*m + ind].reshape((Tini*m,)) for ind in index])
+    if yd.ndim > 1:
+        sampled_yini = np.array([yd[ind:Tini + ind, :].reshape((Tini*p,)) for ind in index])
+    else:
+        sampled_yini = np.array([yd[ind:Tini*p + ind].reshape((Tini*p,)) for ind in index])
+    u_ini, y_ini = torch.Tensor(sampled_uini), torch.Tensor(sampled_yini)
+    return u_ini, y_ini
+
 def block_hankel(w: np.array, L: int, d: int) -> np.array:
     """
     Builds block Hankel matrix for column vector w of order L
@@ -38,10 +61,28 @@ class Clamp(torch.autograd.Function):
     def forward(ctx, input):
         return input.clamp(min=1e-3, max=1e6) # the value in iterative = 2
 
-    @staticmethod
+    @staticmethod 
     def backward(ctx, grad_output):
         return grad_output.clone()
-    
+
+class RechtDx(nn.Module):
+    """
+    torch enviornment for simple recht temperature control system
+    """
+    def __init__(self) -> None:
+        super().__init__()
+        self.A = torch.Tensor([[1.01, 0.01, 0.00], 
+                [0.01, 1.01, 0.01], 
+                [0.00, 0.01, 1.01]])
+        
+    def forward(self, x : torch.Tensor, u : torch.Tensor) -> torch.Tensor:
+        if x.ndim > 1:
+            batch_size = x.shape[0]
+            self.A = self.A.repeat(batch_size, 1, 1)
+        y = self.A @ x + u
+        return y
+        
+
 class CartpoleDx(nn.Module):
     def __init__(self, params=None):
         super().__init__()
