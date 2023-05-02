@@ -16,7 +16,8 @@ def sample_initial_signal(Tini : int, p : int, m : int, batch : int, ud : np.arr
         ud  = System input data
         yd = system output data
     """
-    index = np.random.uniform(size=(batch,), low=0, high=15).astype(np.uint8)
+    high = 15
+    index = np.random.uniform(size=(batch,), low=0, high=high).astype(np.uint8)
     if ud.ndim > 1:
         sampled_uini = np.array([ud[ind:Tini + ind, :].reshape((Tini*m,)) for ind in index])
     else:

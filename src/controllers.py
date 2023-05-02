@@ -362,7 +362,7 @@ class DDeePC(nn.Module):
 
     def __init__(self, ud: np.array, yd: np.array, y_constraints: np.array, u_constraints: np.array, 
                  N: int, Tini: int, T: int, p: int, m: int, n_batch: int,
-                 stochastic : bool, linear : bool,
+                 stochastic : bool, linear : bool, device : str,
                  q=None, r=None, lam_y=None, lam_g1=None, lam_g2=None):
         super().__init__()
 
@@ -404,6 +404,7 @@ class DDeePC(nn.Module):
         self.stochastic = stochastic
         self.linear = linear
         self.n_batch = n_batch
+        self.device = device
         self.clamper = Clamp()
 
         # Initialise torch parameters
@@ -421,15 +422,15 @@ class DDeePC(nn.Module):
             if isinstance(lam_y, torch.Tensor):
                 self.lam_y = lam_y 
             else:
-                self.lam_y = Parameter(torch.randn((1,))*0.001 + 0.01)
+                self.lam_y = Parameter(torch.randn((1,))*0.01 + 1)
         else: self.lam_y = 0 # Initialised but won't be used
 
         if not linear:
             if isinstance(lam_g1, torch.Tensor) and isinstance(lam_g2, torch.Tensor):
                 self.lam_g1, self.lam_g2 = lam_g1, lam_g2
             else:
-                self.lam_g1 = Parameter(torch.randn((1,))*0.1 + 1)
-                self.lam_g2 = Parameter(torch.randn((1,))*0.1 + 1)
+                self.lam_g1 = Parameter(torch.randn((1,))*0.01 + 1)
+                self.lam_g2 = Parameter(torch.randn((1,))*0.01 + 1)
         else: self.lam_g1, self.lam_g2 = 0, 0 # Initialised but won't be used
 
         # Check for full row rank
@@ -528,7 +529,6 @@ class DDeePC(nn.Module):
             output : optimal output signal
             cost : optimal cost
         """
-        
         # Set lam_y to 0 if negative 
         if self.stochastic:
             self.lam_y.data = self.clamper.apply(self.lam_y)
@@ -541,8 +541,8 @@ class DDeePC(nn.Module):
 
         # Construct Q and R matrices 
         if u_ini.ndim > 1 or y_ini.ndim > 1 or ref.ndim > 1:
-            Q = torch.diag(torch.kron(torch.ones(self.N), torch.sqrt(self.q))).repeat(self.n_batch, 1, 1)
-            R = torch.diag(torch.kron(torch.ones(self.N), torch.sqrt(self.r))).repeat(self.n_batch, 1, 1)
+            Q = torch.diag(torch.kron(torch.ones(self.N), torch.sqrt(self.q))).repeat(self.n_batch, 1, 1).to(self.device)
+            R = torch.diag(torch.kron(torch.ones(self.N), torch.sqrt(self.r))).repeat(self.n_batch, 1, 1).to(self.device)
         else :
             Q = torch.diag(torch.kron(torch.ones(self.N), torch.sqrt(self.q)))
             R = torch.diag(torch.kron(torch.ones(self.N), torch.sqrt(self.r)))
