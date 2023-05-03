@@ -409,20 +409,20 @@ class DDeePC(nn.Module):
 
         # Initialise torch parameters
         if isinstance(q, torch.Tensor):
-            self.q = q
+            self.q = q.to(self.device)
         else : 
-            self.q = Parameter(torch.randn(size=(self.p,)) + 10)
+            self.q = Parameter(torch.randn(size=(self.p,))*0.01 + 1)
         
         if isinstance(r, torch.Tensor):
-            self.r = r
+            self.r = r.to(self.device)
         else : 
-            self.r = Parameter(torch.randn(size=(self.m,)) + 10)
+            self.r = Parameter(torch.randn(size=(self.m,))*0.01 + 1)
 
         if stochastic:
             if isinstance(lam_y, torch.Tensor):
                 self.lam_y = lam_y 
             else:
-                self.lam_y = Parameter(torch.randn((1,))*0.01 + 1)
+                self.lam_y = Parameter(torch.randn((1,))*0.01 + 10)
         else: self.lam_y = 0 # Initialised but won't be used
 
         if not linear:
@@ -541,11 +541,11 @@ class DDeePC(nn.Module):
 
         # Construct Q and R matrices 
         if u_ini.ndim > 1 or y_ini.ndim > 1 or ref.ndim > 1:
-            Q = torch.diag(torch.kron(torch.ones(self.N), torch.sqrt(self.q))).repeat(self.n_batch, 1, 1).to(self.device)
-            R = torch.diag(torch.kron(torch.ones(self.N), torch.sqrt(self.r))).repeat(self.n_batch, 1, 1).to(self.device)
+            Q = torch.diag(torch.kron(torch.ones(self.N).to(self.device), torch.sqrt(self.q))).repeat(self.n_batch, 1, 1).to(self.device)
+            R = torch.diag(torch.kron(torch.ones(self.N).to(self.device), torch.sqrt(self.r))).repeat(self.n_batch, 1, 1).to(self.device)
         else :
-            Q = torch.diag(torch.kron(torch.ones(self.N), torch.sqrt(self.q)))
-            R = torch.diag(torch.kron(torch.ones(self.N), torch.sqrt(self.r)))
+            Q = torch.diag(torch.kron(torch.ones(self.N).to(self.device), torch.sqrt(self.q))).to(self.device)
+            R = torch.diag(torch.kron(torch.ones(self.N).to(self.device), torch.sqrt(self.r))).to(self.device)
 
         params = [Q, R, u_ini, y_ini, ref]
 
