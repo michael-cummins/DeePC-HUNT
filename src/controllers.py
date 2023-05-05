@@ -422,7 +422,7 @@ class DDeePC(nn.Module):
             if isinstance(lam_y, torch.Tensor):
                 self.lam_y = lam_y 
             else:
-                self.lam_y = Parameter(torch.randn((1,))*0.01 + 10)
+                self.lam_y = Parameter(torch.randn((1,))*0.01 + 0.1)
         else: self.lam_y = 0 # Initialised but won't be used
 
         if not linear:
@@ -514,7 +514,13 @@ class DDeePC(nn.Module):
 
         self.QP_layer = CvxpyLayer(problem=problem, parameters=params, variables=variables)
 
-
+    def get_PI(self):
+        # Constant for sum_squares regularization on G
+        PI = np.vstack([self.Up, self.Yp, self.Uf])
+        PI = np.linalg.pinv(PI)@PI
+        I = np.eye(PI.shape[0])
+        return I, PI
+    
     def forward(self, ref: torch.Tensor, u_ini: torch.Tensor, y_ini: torch.Tensor) -> torch.Tensor:
 
         """
@@ -557,7 +563,7 @@ class DDeePC(nn.Module):
             params.append(self.lam_y)
 
         out = self.QP_layer(*params, solver_args={"solve_method": "ECOS"})
-        input, output = out[2], out[3]
+        g, input, output, sig_y = out[0], out[2], out[3], out[-1]
 
-        return input, output
+        return g, input, output, sig_y
 

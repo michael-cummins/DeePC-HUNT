@@ -5,6 +5,31 @@ from mpc import util
 from torch import nn
 from torch.autograd import Variable
 
+def episode_loss(Y : torch.Tensor, U : torch.Tensor, G : torch.Tensor,
+                 E : torch.Tensor, n_batch : int, controller, PI) -> torch.Tensor:
+    """
+    Calculate loss for for batch trajectory - pretty inificient, look into vectorizing
+    Y should be shape(batch, T, p) - T is length of trajectory
+    G should be shape(batch, T, Td-Tini-N+1)
+    """
+    # Just being Cautious, will remove later and infer batch from X
+    if n_batch != Y.shape[0] : raise AssertionError("Shape of Y should be consistent with batch size")
+    phi = torch.Tensor()
+    T = G.shape[1]
+    for i in range(n_batch):
+        Ct, Cr = 0, 0
+        for j in range(T):
+            Ct += (Y[i,j,:].T @ torch.diag(controller.q) @ Y[i,j,:] + U[i,j,:].T @ torch.diag(controller.r) @ U[i,j,:]).reshape(1)
+            if not controller.linear:
+                Cr += torch.norm((PI)@G[i,j,:], p=2)**2
+                Cr += torch.norm((PI)@G[i,j,:], p=2)
+            if controller.stochastic:
+                Cr += torch.norm(E[i,j,:], p=1)
+        phi = torch.cat((phi, Ct+Cr), axis=0)
+    loss = torch.sum(phi)/n_batch
+    return loss
+
+
 def sample_initial_signal(Tini : int, p : int, m : int, batch : int, ud : np.array, yd : np.array) -> torch.Tensor:
     """
     Samples initial signal trajectory from system data
@@ -183,3 +208,40 @@ class CartpoleDx(nn.Module):
         px = -torch.sqrt(self.goal_weights)*self.goal_state #+ self.mpc_lin
         p = torch.cat((px, torch.zeros(self.n_ctrl)))
         return Variable(q), Variable(p)
+    
+
+class AffineDynamics(nn.Module):
+    def __init__(self, A, B, c=None):
+        super(AffineDynamics, self).__init__()
+
+        assert A.ndimension() == 2
+        assert B.ndimension() == 2
+        if c is not None:
+            assert c.ndimension() == 1
+
+        self.A = A
+        self.B = B
+        self.c = c
+
+    def forward(self, x, u):
+        if not isinstance(x, Variable) and isinstance(self.A, Variable):
+            A = self.A.data
+            B = self.B.data
+            c = self.c.data if self.c is not None else 0.
+        else:
+            A = self.A
+            B = self.B
+            c = self.c if self.c is not None else 0.
+
+        x_dim, u_dim = x.ndimension(), u.ndimension()
+        if x_dim == 1:
+            x = x.unsqueeze(0)
+        if u_dim == 1:
+            u = u.unsqueeze(0)
+
+        z = A@x + B@u + c
+
+        if x_dim == 1:
+            z = z.squeeze(0)
+
+        return z
