@@ -5,27 +5,33 @@ from mpc import util
 from torch import nn
 from torch.autograd import Variable
 
-def episode_loss(Y : torch.Tensor, U : torch.Tensor, G : torch.Tensor,
-                 E : torch.Tensor, n_batch : int, controller, PI) -> torch.Tensor:
+def episode_loss(Y : torch.Tensor, U : torch.Tensor, G : torch.Tensor, E : torch.Tensor, controller, PI) -> torch.Tensor:
     """
     Calculate loss for for batch trajectory - pretty inificient, look into vectorizing
     Y should be shape(batch, T, p) - T is length of trajectory
     G should be shape(batch, T, Td-Tini-N+1)
+    If doing reference tracking, Y and U are expected to be in delta formulation
     """
-    # Just being Cautious, will remove later and infer batch from X
-    if n_batch != Y.shape[0] : raise AssertionError("Shape of Y should be consistent with batch size")
-    phi = torch.Tensor()
+    n_batch = G.shape[0]
     T = G.shape[1]
+    phi = torch.Tensor()
+
+    # Not sure if I should include the cost/regularisation weights
+    Q, R = torch.diag(controller.q), torch.diag(controller.r)
+    ly = controller.lam_y.data if controller.stochastic else 0
+    (lg1, lg2) = (controller.lam_g1, controller.lam_g2) if not controller.linear else (0, 0) 
+
     for i in range(n_batch):
         Ct, Cr = 0, 0
         for j in range(T):
-            Ct += (Y[i,j,:].T @ torch.diag(controller.q) @ Y[i,j,:] + U[i,j,:].T @ torch.diag(controller.r) @ U[i,j,:]).reshape(1)
+            Ct += (Y[i,j,:].T @ Q @ Y[i,j,:] + U[i,j,:].T @ R @ U[i,j,:]).reshape(1)
             if not controller.linear:
-                Cr += torch.norm((PI)@G[i,j,:], p=2)**2
-                Cr += torch.norm((PI)@G[i,j,:], p=2)
+                Cr += (torch.norm((PI)@G[i,j,:], p=2)**2)*lg1
+                Cr += torch.norm((PI)@G[i,j,:], p=2)*lg2
             if controller.stochastic:
-                Cr += torch.norm(E[i,j,:], p=1)
+                Cr += torch.norm(E[i,j,:], p=1)*ly
         phi = torch.cat((phi, Ct+Cr), axis=0)
+
     loss = torch.sum(phi)/n_batch
     return loss
 
