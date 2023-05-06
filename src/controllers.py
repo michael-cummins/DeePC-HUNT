@@ -205,8 +205,8 @@ class DHDeePC(nn.Module):
             if isinstance(lam_g1, torch.Tensor) and isinstance(lam_g2, torch.Tensor):
                 self.lam_g1, self.lam_g2 = lam_g1, lam_g2
             else:
-                self.lam_g1 = Parameter(torch.randn((1,))*0.1 + 10)
-                self.lam_g2 = Parameter(torch.randn((1,))*0.1 + 10)
+                self.lam_g1 = Parameter(torch.randn((1,))*0.01 + 10)
+                self.lam_g2 = Parameter(torch.randn((1,))*0.01 + 10)
         else: self.lam_g1, self.lam_g2 = 0, 0 # Initialised but won't be used
 
         # Check for full row rank
@@ -411,26 +411,26 @@ class DDeePC(nn.Module):
         if isinstance(q, torch.Tensor):
             self.q = q.to(self.device)
         else : 
-            self.q = Parameter(torch.randn(size=(self.p,))*0.01 + 1)
+            self.q = Parameter(torch.randn(size=(self.p,))*0.01 + 10)
         
         if isinstance(r, torch.Tensor):
             self.r = r.to(self.device)
         else : 
-            self.r = Parameter(torch.randn(size=(self.m,))*0.01 + 1)
+            self.r = Parameter(torch.randn(size=(self.m,))*0.01 + 10)
 
         if stochastic:
             if isinstance(lam_y, torch.Tensor):
                 self.lam_y = lam_y 
             else:
-                self.lam_y = Parameter(torch.randn((1,))*0.01 + 0.1)
+                self.lam_y = Parameter(torch.randn((1,))*0.01 + 200)
         else: self.lam_y = 0 # Initialised but won't be used
 
         if not linear:
             if isinstance(lam_g1, torch.Tensor) and isinstance(lam_g2, torch.Tensor):
                 self.lam_g1, self.lam_g2 = lam_g1, lam_g2
             else:
-                self.lam_g1 = Parameter(torch.randn((1,))*0.01 + 1)
-                self.lam_g2 = Parameter(torch.randn((1,))*0.01 + 1)
+                self.lam_g1 = Parameter(torch.randn((1,))*0.01 + 50)
+                self.lam_g2 = Parameter(torch.randn((1,))*0.01 + 50)
         else: self.lam_g1, self.lam_g2 = 0, 0 # Initialised but won't be used
 
         # Check for full row rank
@@ -535,15 +535,6 @@ class DDeePC(nn.Module):
             output : optimal output signal
             cost : optimal cost
         """
-        # Set lam_y to 0 if negative 
-        if self.stochastic:
-            self.lam_y.data = self.clamper.apply(self.lam_y)
-        if not self.linear:
-            self.lam_g1.data = self.clamper.apply(self.lam_g1)
-            self.lam_g2.data = self.clamper.apply(self.lam_g2)
-
-        self.q.data = self.clamper.apply(self.q)
-        self.r.data = self.clamper.apply(self.r)
 
         # Construct Q and R matrices 
         if u_ini.ndim > 1 or y_ini.ndim > 1 or ref.ndim > 1:

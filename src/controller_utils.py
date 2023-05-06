@@ -14,10 +14,10 @@ def episode_loss(Y : torch.Tensor, U : torch.Tensor, G : torch.Tensor, E : torch
     """
     n_batch = G.shape[0]
     T = G.shape[1]
-    phi = torch.Tensor()
+    phi = torch.Tensor().to(controller.device)
 
     # Not sure if I should include the cost/regularisation weights
-    Q, R = torch.diag(controller.q), torch.diag(controller.r)
+    Q, R = torch.diag(controller.q).to(controller.device), torch.diag(controller.r).to(controller.device)
     ly = controller.lam_y.data if controller.stochastic else 0
     (lg1, lg2) = (controller.lam_g1, controller.lam_g2) if not controller.linear else (0, 0) 
 
@@ -26,10 +26,10 @@ def episode_loss(Y : torch.Tensor, U : torch.Tensor, G : torch.Tensor, E : torch
         for j in range(T):
             Ct += (Y[i,j,:].T @ Q @ Y[i,j,:] + U[i,j,:].T @ R @ U[i,j,:]).reshape(1)
             if not controller.linear:
-                Cr += (torch.norm((PI)@G[i,j,:], p=2)**2)*lg1
-                Cr += torch.norm((PI)@G[i,j,:], p=2)*lg2
+                Cr += torch.norm((PI)@G[i,j,:], p=2)**2
+                Cr += torch.norm((PI)@G[i,j,:], p=2)
             if controller.stochastic:
-                Cr += torch.norm(E[i,j,:], p=1)*ly
+                Cr += torch.norm(E[i,j,:], p=1)
         phi = torch.cat((phi, Ct+Cr), axis=0)
 
     loss = torch.sum(phi)/n_batch
