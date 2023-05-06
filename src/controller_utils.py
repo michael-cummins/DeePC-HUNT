@@ -24,7 +24,7 @@ def episode_loss(Y : torch.Tensor, U : torch.Tensor, G : torch.Tensor, E : torch
     for i in range(n_batch):
         Ct, Cr = 0, 0
         for j in range(T):
-            Ct += (Y[i,j,:].mT @ Q @ Y[i,j,:] + U[i,j,:].mT @ R @ U[i,j,:]).reshape(1)
+            Ct += (Y[i,j,:].T @ Q @ Y[i,j,:] + U[i,j,:].T @ R @ U[i,j,:]).reshape(1)
             if not controller.linear:
                 Cr += (torch.norm((PI)@G[i,j,:], p=2)**2)*lg1
                 Cr += torch.norm((PI)@G[i,j,:], p=2)*lg2
