@@ -422,15 +422,18 @@ class DDeePC(nn.Module):
             if isinstance(lam_y, torch.Tensor):
                 self.lam_y = lam_y 
             else:
-                self.lam_y = Parameter(torch.randn((1,))*0.01 + 550)
+                self.lam_y = Parameter(torch.randn((1,))*0.01 + 500)
         else: self.lam_y = 0 # Initialised but won't be used
 
         if not linear:
-            if isinstance(lam_g1, torch.Tensor) and isinstance(lam_g2, torch.Tensor):
-                self.lam_g1, self.lam_g2 = lam_g1, lam_g2
+            if isinstance(lam_g1, torch.Tensor):
+                self.lam_g1 = lam_g1
             else:
-                self.lam_g1 = Parameter(torch.randn((1,))*0.01 + 200)
-                self.lam_g2 = Parameter(torch.randn((1,))*0.01 + 5)
+                self.lam_g1 = Parameter(torch.randn((1,))*0.01 + 500)
+            if isinstance(lam_g2, torch.Tensor):
+                self.lam_g2 = lam_g2
+            else:
+                self.lam_g2 = Parameter(torch.randn((1,))*0.01 + 1)
         else: self.lam_g1, self.lam_g2 = 0, 0 # Initialised but won't be used
 
         # Check for full row rank
@@ -470,7 +473,7 @@ class DDeePC(nn.Module):
 
         # Set constraints and cost function according to system (nonlinear / stochastic)
         if not linear:
-            cost += cp.sum_squares((I - PI)@g)*l_g1 + cp.norm1(g)*l_g2 
+            cost += cp.sum_squares((I - PI)@g)*l_g1 + cp.norm2(g)*l_g2 
             assert cost.is_dpp()
 
         if stochastic:
@@ -553,7 +556,7 @@ class DDeePC(nn.Module):
         if self.stochastic:
             params.append(self.lam_y)
 
-        out = self.QP_layer(*params, solver_args={"solve_method": "ECOS"})
+        out = self.QP_layer(*params, solver_args={"solve_method": "SCS"})
         g, input, output, sig_y = out[0], out[2], out[3], out[-1]
 
         return g, input, output, sig_y

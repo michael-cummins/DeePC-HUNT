@@ -18,8 +18,8 @@ def episode_loss(Y : torch.Tensor, U : torch.Tensor, G : torch.Tensor, E : torch
 
     # Not sure if I should include the cost/regularisation weights
     Q, R = torch.diag(controller.q).to(controller.device), torch.diag(controller.r).to(controller.device)
-    ly = controller.lam_y.data if controller.stochastic else 0
-    (lg1, lg2) = (controller.lam_g1, controller.lam_g2) if not controller.linear else (0, 0) 
+    # ly = controller.lam_y.data if controller.stochastic else 0
+    # (lg1, lg2) = (controller.lam_g1, controller.lam_g2) if not controller.linear else (0, 0) 
 
     for i in range(n_batch):
         Ct, Cr = 0, 0
