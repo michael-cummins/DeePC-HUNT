@@ -1,4 +1,4 @@
-from controller_utils import block_hankel, Clamp, block_hankel_torch
+from controller_utils import block_hankel, WeightClipper, block_hankel_torch
 import torch
 import torch.nn as nn
 from torch.nn.parameter import Parameter
@@ -321,15 +321,14 @@ class DHDeePC(nn.Module):
         """
 
         # Set lam_y to 0 if negative 
-        clamper = Clamp()
-        if self.stochastic:
-            self.lam_y.data = clamper.apply(self.lam_y)
-        if not self.linear:
-            self.lam_g1.data = clamper.apply(self.lam_g1)
-            self.lam_g2.data = clamper.apply(self.lam_g2)
+        # if self.stochastic:
+        #     self.lam_y.data = clamper.apply(self.lam_y)
+        # if not self.linear:
+        #     self.lam_g1.data = clamper.apply(self.lam_g1)
+        #     self.lam_g2.data = clamper.apply(self.lam_g2)
 
-        self.q.data = clamper.apply(self.q)
-        self.r.data = clamper.apply(self.r)
+        # self.q.data = clamper.apply(self.q)
+        # self.r.data = clamper.apply(self.r)
 
         # Construct Q and R matrices 
         Q = torch.diag(torch.sqrt(self.q))
@@ -363,7 +362,7 @@ class DDeePC(nn.Module):
     def __init__(self, ud: np.array, yd: np.array, y_constraints: np.array, u_constraints: np.array, 
                  N: int, Tini: int, T: int, p: int, m: int, n_batch: int,
                  stochastic : bool, linear : bool, device : str,
-                 q=None, r=None, lam_y=None, lam_g1=None, lam_g2=None):
+                 q=None, r=None, lam_y=None, lam_g1=None, lam_g2=None, lam_u=None):
         super().__init__()
 
         """
@@ -405,35 +404,38 @@ class DDeePC(nn.Module):
         self.linear = linear
         self.n_batch = n_batch
         self.device = device
-        self.clamper = Clamp()
 
         # Initialise torch parameters
         if isinstance(q, torch.Tensor):
             self.q = q.to(self.device)
         else : 
-            self.q = Parameter(torch.randn(size=(self.p,))*0.01 + 10)
+            self.q = Parameter(torch.randn(size=(self.p,))*0.01 + 100)
         
         if isinstance(r, torch.Tensor):
             self.r = r.to(self.device)
         else : 
-            self.r = Parameter(torch.randn(size=(self.m,))*0.01 + 10)
+            self.r = Parameter(torch.randn(size=(self.m,))*0.001 + 0.01)
 
         if stochastic:
             if isinstance(lam_y, torch.Tensor):
                 self.lam_y = lam_y 
             else:
-                self.lam_y = Parameter(torch.randn((1,))*0.01 + 500)
-        else: self.lam_y = 0 # Initialised but won't be used
+                self.lam_y = Parameter(torch.randn((1,))*0.01 + 20)
+            if isinstance(lam_u, torch.Tensor):
+                self.lam_u = lam_u 
+            else:
+                self.lam_u = Parameter(torch.randn((1,))*0.01 + 20)
+        else: self.lam_y, self.lam_u = 0, 0 # Initialised but won't be used
 
         if not linear:
             if isinstance(lam_g1, torch.Tensor):
                 self.lam_g1 = lam_g1
             else:
-                self.lam_g1 = Parameter(torch.randn((1,))*0.01 + 500)
+                self.lam_g1 = Parameter(torch.randn((1,))*0.01 + 20)
             if isinstance(lam_g2, torch.Tensor):
                 self.lam_g2 = lam_g2
             else:
-                self.lam_g2 = Parameter(torch.randn((1,))*0.01 + 1)
+                self.lam_g2 = Parameter(torch.randn((1,))*0.001 + 200)
         else: self.lam_g1, self.lam_g2 = 0, 0 # Initialised but won't be used
 
         # Check for full row rank
@@ -456,6 +458,7 @@ class DDeePC(nn.Module):
         e = cp.Variable(N*p)
         self.u = cp.Variable(N*m)
         sig_y = cp.Variable(self.Tini*self.p)
+        sig_u = cp.Variable(self.Tini*self.m)
 
         # Constant for sum_squares regularization on G
         PI = np.vstack([self.Up, self.Yp, self.Uf])
@@ -465,6 +468,7 @@ class DDeePC(nn.Module):
         # Initalise optimization parameters and cost
         l_g1, l_g2 = cp.Parameter(shape=(1,), nonneg=True), cp.Parameter(shape=(1,), nonneg=True)
         l_y = cp.Parameter(shape=(1,), nonneg=True)
+        l_u = cp.Parameter(shape=(1,), nonneg=True)
         Q_block_sqrt, R_block_sqrt = cp.Parameter((p*N,p*N)), cp.Parameter((m*N,m*N))
         ref = cp.Parameter((N*p,))
         u_ini, y_ini = cp.Parameter(Tini*m), cp.Parameter(Tini*p)
@@ -473,15 +477,15 @@ class DDeePC(nn.Module):
 
         # Set constraints and cost function according to system (nonlinear / stochastic)
         if not linear:
-            cost += cp.sum_squares((I - PI)@g)*l_g1 + cp.norm2(g)*l_g2 
+            cost += cp.sum_squares((I - PI)@g)*l_g1 + cp.norm1(g)*l_g2 
             assert cost.is_dpp()
 
         if stochastic:
-            cost += cp.norm1(sig_y)*l_y
+            cost += cp.norm1(sig_y)*l_y + cp.norm1(sig_u)*l_u
             assert cost.is_dpp()
             constraints = [
                 e == self.y - ref,  # necessary for paramaterized programming
-                self.Up@g == u_ini,
+                self.Up@g == u_ini + sig_u,
                 self.Yp@g == y_ini + sig_y,
                 self.Uf@g == self.u,
                 self.Yf@g == self.y,
@@ -513,7 +517,9 @@ class DDeePC(nn.Module):
             params.append(l_g2)
         if stochastic:
             variables.append(sig_y)
+            variables.append(sig_u)
             params.append(l_y)
+            params.append(l_u)
 
         self.QP_layer = CvxpyLayer(problem=problem, parameters=params, variables=variables)
 
@@ -548,16 +554,17 @@ class DDeePC(nn.Module):
             R = torch.diag(torch.kron(torch.ones(self.N).to(self.device), torch.sqrt(self.r))).to(self.device)
 
         params = [Q, R, u_ini, y_ini, ref]
-
+        
         # Add paramters and system
         if not self.linear:
             params.append(self.lam_g1)
-            params.append(self.lam_g2)
+            params.append(self.lam_g2.repeat(self.n_batch,1))
         if self.stochastic:
-            params.append(self.lam_y)
+            params.append(self.lam_y.repeat(self.n_batch,1))
+            params.append(self.lam_u.repeat(self.n_batch,1))
 
         out = self.QP_layer(*params, solver_args={"solve_method": "SCS"})
-        g, input, output, sig_y = out[0], out[2], out[3], out[-1]
+        g, input, output, sig_y, sig_u = out[0], out[2], out[3], out[-2], out[-1]
 
-        return g, input, output, sig_y
+        return g, input, output, sig_y, sig_u
 

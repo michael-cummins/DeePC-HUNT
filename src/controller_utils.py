@@ -5,7 +5,7 @@ from mpc import util
 from torch import nn
 from torch.autograd import Variable
 
-def episode_loss(Y : torch.Tensor, U : torch.Tensor, G : torch.Tensor, E : torch.Tensor, controller, PI) -> torch.Tensor:
+def episode_loss(Y : torch.Tensor, U : torch.Tensor, G : torch.Tensor, Ey : torch.Tensor, Eu : torch.Tensor, controller, PI) -> torch.Tensor:
     """
     Calculate loss for for batch trajectory - pretty inificient, look into vectorizing
     Y should be shape(batch, T, p) - T is length of trajectory
@@ -27,11 +27,10 @@ def episode_loss(Y : torch.Tensor, U : torch.Tensor, G : torch.Tensor, E : torch
             Ct += (Y[i,j,:].T @ Q @ Y[i,j,:] + U[i,j,:].T @ R @ U[i,j,:]).reshape(1)
             if not controller.linear:
                 Cr += torch.norm((PI)@G[i,j,:], p=2)**2
-                Cr += torch.norm((PI)@G[i,j,:], p=2)
+                Cr += torch.norm((PI)@G[i,j,:], p=1)
             if controller.stochastic:
-                Cr += torch.norm(E[i,j,:], p=1)
+                Cr += torch.norm(Ey[i,j,:], p=1) + torch.norm(Eu[i,j,:], p=1)
         phi = torch.cat((phi, Ct+Cr), axis=0)
-
     loss = torch.sum(phi)/n_batch
     return loss
 
@@ -85,17 +84,18 @@ def block_hankel_torch(w: torch.Tensor, L: int, d: int) -> torch.Tensor:
         H[:,i] = w[d*i:d*(L+i)]
     return H
 
-class Clamp(torch.autograd.Function):
-    """
-    https://discuss.pytorch.org/t/regarding-clamped-learnable-parameter/58474/4
-    """
-    @staticmethod
-    def forward(ctx, input):
-        return input.clamp(min=1e-3, max=1e6) # the value in iterative = 2
+class WeightClipper(object):
 
-    @staticmethod 
-    def backward(ctx, grad_output):
-        return grad_output.clone()
+    def __init__(self, frequency=1):
+        self.frequency = frequency
+
+    def __call__(self, module):
+        # filter the variables to get the ones you want
+        # if hasattr(module, 'weight'):
+        for param in module.parameters():
+            w = param.data
+            w = w.clamp(10e-4,10e4)
+            param.data = w
 
 class RechtDx(nn.Module):
     """
@@ -129,7 +129,7 @@ class CartpoleDx(nn.Module):
         else:
             self.params = params
         assert len(self.params) == 4
-        self.force_mag = 100.
+        self.force_mag = 3.
 
         self.theta_threshold_radians = np.pi#12 * 2 * np.pi / 360
         self.x_threshold = 2.4
@@ -143,8 +143,8 @@ class CartpoleDx(nn.Module):
         # 0  1      2        3   4
         # x dx cos(th) sin(th) dth
         self.goal_state = torch.Tensor(  [ 0.,  0., 0.,   0.])
-        self.goal_weights = torch.Tensor([0.1, 0.1,  1., 0.1])
-        self.ctrl_penalty = 0.001
+        self.goal_weights = torch.Tensor([100, 100,  100, 100])
+        self.ctrl_penalty = 0.01
 
         self.mpc_eps = 1e-4
         self.linesearch_decay = 0.5
