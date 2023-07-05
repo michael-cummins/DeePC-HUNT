@@ -84,7 +84,7 @@ def block_hankel_torch(w: torch.Tensor, L: int, d: int) -> torch.Tensor:
         H[:,i] = w[d*i:d*(L+i)]
     return H
 
-class WeightClipper(object):
+class Projection(object):
 
     def __init__(self, frequency=1):
         self.frequency = frequency
@@ -94,7 +94,7 @@ class WeightClipper(object):
         # if hasattr(module, 'weight'):
         for param in module.parameters():
             w = param.data
-            w = w.clamp(10e-4,10e4)
+            w = w.clamp(10e-4,10e3)
             param.data = w
 
 class RechtDx(nn.Module):

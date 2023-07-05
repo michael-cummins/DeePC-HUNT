@@ -12,7 +12,7 @@ from numpy import loadtxt
 from mpc import util
 from numpy import savetxt
 
-from controller_utils import CartpoleDx, sample_initial_signal, WeightClipper, episode_loss
+from controller_utils import CartpoleDx, episode_loss
 from tqdm import tqdm
 import torch
 import torch.optim as optim
@@ -29,7 +29,7 @@ m = 1
 p = 4
 Tf = 20
 T = (m+1)*(Tini + Tf + p) + 14
-n_batch = 20
+n_batch = 40
 device = 'cuda' if torch.cuda.is_available() else 'mps'
 # device = 'cpu'
 print(device)
@@ -42,7 +42,6 @@ yd = yd + noise
 ud = ud + noiseu
 dx_deepc = CartpoleDx().to(device)
 dx_mpc = CartpoleDx().to(device)
-clipper = WeightClipper()
 def uniform(shape, low, high):
     r = high-low
     return torch.rand(shape)*r+low
@@ -113,10 +112,10 @@ for i, ly in enumerate(lamy):
                 y = dx_deepc(y, input)
                 Y = torch.cat((Y, y.unsqueeze(1)), axis=1)
                 
-                if any(torch.abs(y[:,0]) >= 0.15) or any(torch.abs(y[:,1]) >= 0.5) or any(torch.abs(y[:,2]) >= 0.15) or any(torch.abs(y[:,3]) >= 0.5): 
-                    violated = True
-                    pbar.set_description(f'violated = {violated}, episode = {l}, lam1 = {controller.lam_g1}, lam2={controller.lam_g2}')
-                    break
+                # if any(torch.abs(y[:,0]) >= 0.15) or any(torch.abs(y[:,1]) >= 0.5) or any(torch.abs(y[:,2]) >= 0.15) or any(torch.abs(y[:,3]) >= 0.5): 
+                #     violated = True
+                #     pbar.set_description(f'violated = {violated}, episode = {l}, lam1 = {controller.lam_g1}, lam2={controller.lam_g2}')
+                #     break
                 
                 yini = torch.cat((yini[:, p:], y+noise), axis=1)
                 uini = torch.cat((uini[:, m:], input), axis=1)

@@ -2,6 +2,13 @@
 .tmp.driveupload/
 .tmp.drivedownload/
 images/
+cartpole_loss_10.csv
+cartpole_loss_20.csv
+cartpole_loss_40.csv
+performance_ly370.csv
+lam_g1.csv
+*/.mp4
+lam_g2.csv
 src/.ipynb_checkpoints/
 src/__pycache__
 .vscode
