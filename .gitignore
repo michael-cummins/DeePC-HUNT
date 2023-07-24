@@ -10,7 +10,7 @@ lam_g1.csv
 */.mp4
 lam_g2.csv
 ddeepc/.ipynb_checkpoints/
-ddeepc/__pycache__
+/ddeepc/__pycache__
 .vscode
 .pytest_cache/
 DDeePC_images/

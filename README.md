@@ -11,11 +11,12 @@ pip install -r requirements.txt
 Differentiable DeePC layer is inspired by [Differentiable MPC](https://github.com/locuslab/differentiable-mpc) and built using [CvxpyLayers](https://github.com/cvxgrp/cvxpylayers).
 
 ## Hyperparameter Tuning
-![]()
+![Problem Formulation](https://github.com/michael-cummins/DeePC-HUNT/blob/main/videos/deepc_problem.png)
 
 DeePC can achieve performance that rivals MPC on non-linear and stochastic systems but is highly sensitive to the choice of regularization parameters. We present a method for automatically tuning these parameters and validate its perforamce on a noisy [cartpole]() and [LTI]() system. Further technical details can be viewed in the report.
 
 ### Before training
-
+![](https://github.com/michael-cummins/DeePC-HUNT/blob/main/videos/cartpole_init.mp4)
 ### After training (episode 70)
+![](https://github.com/michael-cummins/DeePC-HUNT/blob/main/videos/cartpole_demo.mp4)
 
