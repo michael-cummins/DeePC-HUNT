@@ -1,4 +1,4 @@
-from controller_utils import block_hankel, block_hankel_torch
+from utils import block_hankel, block_hankel_torch
 import torch
 import torch.nn as nn
 from torch.nn.parameter import Parameter
@@ -110,7 +110,7 @@ class DeePC:
             self.cost += cp.sum_squares(self.PI@self.g)*lam_g1 + cp.norm(self.g, 1)*lam_g2
             
 
-    def solve(self, verbose=False, solver=cp.MOSEK) -> np.array:
+    def solve(self, verbose=False, solver=cp.MOSEK) -> np.ndarray:
         
         """
         Call once the controller is set up with relevenat parameters.
@@ -135,7 +135,7 @@ class DDeePC(nn.Module):
     """
 
     def __init__(self, ud: np.array, yd: np.array, y_constraints: np.array, u_constraints: np.array, 
-                 N: int, Tini: int, T: int, p: int, m: int, n_batch: int,
+                 N: int, Tini: int, p: int, m: int, n_batch: int,
                  stochastic_y : bool, stochastic_u : bool, linear : bool, device : str,
                  q=None, r=None, lam_y=None, lam_g1=None, lam_g2=None, lam_u=None):
         super().__init__()
@@ -143,7 +143,7 @@ class DDeePC(nn.Module):
         """
         Initialise differentiable DeePC
         args:
-            - ud : time series vector of input signals 
+            - ud : time series vector of input signals - always pass as shape (T, m)
             - yd : time series vector of output signals 
             - y_constraints : State-wise Constraints on output signal
             - u_constraints : State-wise Constraints on input signal
@@ -157,18 +157,18 @@ class DDeePC(nn.Module):
             - linear : Set true if input and putput signals are collected from a linear system
 
             - q : vector of diagonal elemetns of Q,
-                if passed as none -> randomly initialise as torch parameter from N(1, 0.1) in Rp
+                if passed as none -> randomly initialise as torch parameter in R^p
             - r : vector of diagonal elemetns of R,
-                if passed as none -> randomly initialise as torch parameter from N(1, 0.1) in Rm
+                if passed as none -> randomly initialise as torch parameter in R^m
             - lam_y : regularization paramter for sig_y 
-                    -> if left as none, randomly initialise as torch parameter from N(1, 0.1)
+                    -> if left as none, randomly initialise as torch parameter 
             - lam_g1 : regularization paramter for sum_squares regularization on g 
-                    -> if left as none, randomly initialise as torch parameter from N(1, 0.1)
+                    -> if left as none, randomly initialise as torch parameter 
             - lam_g2 : regularization paramter for norm1 regularization on g 
-                    -> if left as none, randomly initialise as torch parameter from N(1, 0.1)
+                    -> if left as none, randomly initialise as torch parameter 
         """
-
-        self.T = T
+        
+        self.T = int(len(ud))
         self.Tini = Tini
         self.N = N
         self.p = p
@@ -177,14 +177,14 @@ class DDeePC(nn.Module):
         self.u_constraints = u_constraints
         self.stochastic_y = stochastic_y
         self.stochastic_u = stochastic_u
+        self.device = device # TODO: Shouldn't have to do this
         self.linear = linear
         self.n_batch = n_batch
-        self.device = device
 
         # Initialise torch parameters
         if isinstance(q, torch.Tensor):
             self.q = q.to(self.device)
-        else : 
+        else: 
             self.q = Parameter(torch.randn(size=(self.p,))*0.01 + 100)
         
         if isinstance(r, torch.Tensor):
@@ -196,14 +196,13 @@ class DDeePC(nn.Module):
             if isinstance(lam_y, torch.Tensor):
                 self.lam_y = lam_y 
             else:
-                self.lam_y = Parameter(torch.randn((1,))*0.01 + 200)
+                self.lam_y = Parameter(torch.randn((1,))*0.001 + 200)
        
         if stochastic_u:
             if isinstance(lam_u, torch.Tensor):
                 self.lam_u = lam_u 
             else:
                 self.lam_u = Parameter(torch.randn((1,))*0.01 + 200)
-        # else: self.lam_y, self.lam_u = 0, 0 # Initialised but won't be used
 
         if not linear:
             if isinstance(lam_g1, torch.Tensor):
@@ -214,17 +213,16 @@ class DDeePC(nn.Module):
                 self.lam_g2 = lam_g2
             else:
                 self.lam_g2 = Parameter(torch.randn((1,))*0.001 + 200)
-        else: self.lam_g1, self.lam_g2 = 0, 0 # Initialised but won't be used
 
         # Check for full row rank
-        H = block_hankel(w=ud.reshape((m*T,)), L=Tini+N+p, d=m)
+        H = block_hankel(w=ud.reshape((m*self.T,)), L=Tini+N+p, d=m)
         rank = np.linalg.matrix_rank(H)
         if rank != H.shape[0]:
             raise ValueError('Data is not persistently exciting')
         
         # Construct data matrices
-        U = block_hankel(w=ud.reshape((m*T,)), L=Tini+N, d=m)
-        Y = block_hankel(w=yd.reshape((p*T,)), L=Tini+N, d=p)
+        U = block_hankel(w=ud.reshape((m*self.T,)), L=Tini+N, d=m)
+        Y = block_hankel(w=yd.reshape((p*self.T,)), L=Tini+N, d=p)
         self.Up = U[0:m*Tini,:]
         self.Yp = Y[0:p*Tini,:]
         self.Uf = U[Tini*m:,:]
@@ -235,8 +233,8 @@ class DDeePC(nn.Module):
         self.y = cp.Variable(N*p)
         e = cp.Variable(N*p)
         self.u = cp.Variable(N*m)
-        sig_y = cp.Variable(self.Tini*self.p)
-        sig_u = cp.Variable(self.Tini*self.m)
+        sig_y = cp.Variable(self.Tini*self.p) 
+        sig_u = cp.Variable(self.Tini*self.m) 
 
         # Constant for sum_squares regularization on G
         PI = np.vstack([self.Up, self.Yp, self.Uf])
@@ -249,6 +247,7 @@ class DDeePC(nn.Module):
         l_u = cp.Parameter(shape=(1,), nonneg=True)
         Q_block_sqrt, R_block_sqrt = cp.Parameter((p*N,p*N)), cp.Parameter((m*N,m*N))
         ref = cp.Parameter((N*p,))
+        
         u_ini, y_ini = cp.Parameter(Tini*m), cp.Parameter(Tini*p)
         cost = cp.sum_squares(cp.psd_wrap(Q_block_sqrt) @ e) + cp.sum_squares(cp.psd_wrap(R_block_sqrt) @ self.u)
         assert cost.is_dpp()
@@ -258,18 +257,20 @@ class DDeePC(nn.Module):
             cost += cp.sum_squares((I - PI)@g)*l_g1 + cp.norm1(g)*l_g2 
             assert cost.is_dpp()
 
-        cost += stochastic_y*cp.norm1(sig_y)*l_y + stochastic_u*cp.norm1(sig_u)*l_u
+        cost += cp.norm1(sig_y)*l_y if self.stochastic_y else 0
+        cost += cp.norm1(sig_u)*l_u if self.stochastic_u else 0
         assert cost.is_dpp()
+
         constraints = [
             e == self.y - ref,  # necessary for paramaterized programming
-            self.Up@g == u_ini + stochastic_u*sig_u,
-            self.Yp@g == y_ini + stochastic_y*sig_y,
             self.Uf@g == self.u,
             self.Yf@g == self.y,
             cp.abs(self.u) <= self.u_constraints,
             cp.abs(self.y) <= self.y_constraints,
             self.y[-self.p:] == ref[-self.p:]
         ]
+        constraints.append(self.Up@g == u_ini + sig_u) if self.stochastic_u else constraints.append(self.Up@g == u_ini)
+        constraints.append(self.Yp@g == y_ini + sig_y) if self.stochastic_y else constraints.append(self.Yp@g == y_ini)
 
         # Initialise optimization problem
         problem = cp.Problem(cp.Minimize(cost), constraints)
@@ -281,23 +282,25 @@ class DDeePC(nn.Module):
         if not linear:
             params.append(l_g1)
             params.append(l_g2)
-        # if stochastic_y:
-        variables.append(sig_y)
-        params.append(l_y)
-        # if stochastic_u:
-        variables.append(sig_u)
-        params.append(l_u)
+        
+        if stochastic_y:
+            variables.append(sig_y)
+            params.append(l_y)
+        
+        if stochastic_u:
+            variables.append(sig_u)
+            params.append(l_u)
 
         self.QP_layer = CvxpyLayer(problem=problem, parameters=params, variables=variables)
 
     def get_PI(self):
-        # Constant for sum_squares regularization on G
+        # Constant for sum_squares regularization on g
         PI = np.vstack([self.Up, self.Yp, self.Uf])
         PI = np.linalg.pinv(PI)@PI
         I = np.eye(PI.shape[0])
         return I, PI
     
-    def forward(self, ref:torch.Tensor, uref:torch.Tensor, u_ini: torch.Tensor, y_ini: torch.Tensor) -> torch.Tensor:
+    def forward(self, ref: torch.Tensor, uref: torch.Tensor, u_ini: torch.Tensor, y_ini: torch.Tensor) -> list[torch.Tensor]:
 
         """
         Forward call
@@ -336,6 +339,7 @@ class DDeePC(nn.Module):
         out = self.QP_layer(*params, solver_args={"solve_method": "SCS"})
         g, input, output = out[0], out[2], out[3]
         vars = [g, input, output]
+        
         if self.stochastic_y : vars.append(out[-2])
         if self.stochastic_u : vars.append(out[-1])
 

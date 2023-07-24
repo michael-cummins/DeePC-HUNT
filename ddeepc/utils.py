@@ -4,8 +4,10 @@ import torch
 from mpc import util
 from torch import nn
 from torch.autograd import Variable
+from torch.nn import Parameter
 
-def episode_loss(Y : torch.Tensor, U : torch.Tensor, G : torch.Tensor, Ey : torch.Tensor, Eu : torch.Tensor, controller, PI) -> torch.Tensor:
+def episode_loss(Y : torch.Tensor, U : torch.Tensor, G : torch.Tensor, controller, PI,
+                 Ey=None, Eu=None) -> torch.Tensor:
     """
     Calculate loss for for batch trajectory - pretty inificient, look into vectorizing
     Y should be shape(batch, T, p) - T is length of trajectory
@@ -28,8 +30,10 @@ def episode_loss(Y : torch.Tensor, U : torch.Tensor, G : torch.Tensor, Ey : torc
             if not controller.linear:
                 Cr += torch.norm((PI)@G[i,j,:], p=2)**2
                 Cr += torch.norm((PI)@G[i,j,:], p=1)
-            if controller.stochastic:
-                Cr += torch.norm(Ey[i,j,:], p=1) + torch.norm(Eu[i,j,:], p=1)
+            if controller.stochastic_y:
+                Cr += torch.norm(Ey[i,j,:], p=1) 
+            if controller.stochastic_u:
+                Cr += torch.norm(Eu[i,j,:], p=1)
         phi = torch.cat((phi, Ct+Cr), axis=0)
     loss = torch.sum(phi)/n_batch
     return loss
@@ -192,7 +196,7 @@ class CartpoleDx(nn.Module):
         x, dx, th, dth = torch.unbind(state)
         cos_th, sin_th = torch.cos(th), torch.sin(th)
         gravity, masscart, masspole, length = torch.unbind(self.params)
-        th = np.arctan2(sin_th, cos_th)
+        th = torch.arctan2(sin_th, cos_th)
         th_x = sin_th*length
         th_y = cos_th*length
 
@@ -200,6 +204,7 @@ class CartpoleDx(nn.Module):
             fig, ax = plt.subplots(figsize=(6,6))
         else:
             fig = ax.get_figure()
+        x, th_x, th_y, length = tensor2np(x), tensor2np(th_x), tensor2np(th_y), tensor2np(length)
         ax.plot((x,x+th_x), (0, th_y), color='k')
         ax.set_xlim((-length*2, length*2))
         ax.set_ylim((-length*2, length*2))
@@ -225,29 +230,26 @@ class AffineDynamics(nn.Module):
         if c is not None:
             assert c.ndimension() == 1
 
-        self.A = A
-        self.B = B
-        self.c = c
+        self.A = Parameter(A)
+        self.B = Parameter(B)
+        self.c = Parameter(c) if c is not None else c
 
     def forward(self, x, u):
-        if not isinstance(x, Variable) and isinstance(self.A, Variable):
-            A = self.A.data
-            B = self.B.data
-            c = self.c.data if self.c is not None else 0.
-        else:
-            A = self.A
-            B = self.B
-            c = self.c if self.c is not None else 0.
 
         x_dim, u_dim = x.ndimension(), u.ndimension()
         if x_dim == 1:
             x = x.unsqueeze(0)
         if u_dim == 1:
             u = u.unsqueeze(0)
-
-        z = A@x + B@u + c
+        
+        # print(f'x:{x.device}, u:{u.device}, A:{self.A.device}, B:{self.B.device}')
+        z = x.mm(self.A) + u.mm(self.B) 
+        z += self.c if self.c is not None else 0
 
         if x_dim == 1:
             z = z.squeeze(0)
 
         return z
+
+def tensor2np(tensor : torch.Tensor) -> np.ndarray:
+    return tensor.detach().cpu().numpy()
