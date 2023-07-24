@@ -17,10 +17,16 @@ DeePC can achieve performance that rivals MPC on non-linear and stochastic syste
 
 ### Cartpole - before training
 
-https://github.com/michael-cummins/DeePC-HUNT/assets/72135336/8684f5ad-4b0c-424b-b322-7c104974324c
+
+
+https://github.com/michael-cummins/DeePC-HUNT/assets/72135336/1c73ca21-91c1-4669-a04d-1d9a103d9d48
+
 
 
 ### Cartpole - after training (episode 70)
 
-https://github.com/michael-cummins/DeePC-HUNT/assets/72135336/c2bec755-3aaf-4892-8654-ef78b47e0020
+
+
+
+https://github.com/michael-cummins/DeePC-HUNT/assets/72135336/b6fa9948-a768-4646-b87f-018395fcc6c4
 
