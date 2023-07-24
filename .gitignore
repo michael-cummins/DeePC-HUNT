@@ -9,10 +9,10 @@ performance_ly370.csv
 lam_g1.csv
 */.mp4
 lam_g2.csv
-src/.ipynb_checkpoints/
-src/__pycache__
+ddeepc/.ipynb_checkpoints/
+ddeepc/__pycache__
 .vscode
 .pytest_cache/
 DDeePC_images/
-install-mujoco.sh
+install-mujoco.sh/
 archive/
