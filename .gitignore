@@ -8,6 +8,8 @@ cartpole_loss_20.csv
 cartpole_loss_40.csv
 performance_ly370.csv
 lam_g1.csv
+/dist
+/build
 */.mp4
 lam_g2.csv
 examples/.ipynb_checkpoints/
