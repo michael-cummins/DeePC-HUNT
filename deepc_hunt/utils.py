@@ -1,7 +1,6 @@
 import numpy as np
 import matplotlib.pyplot as plt
 import torch
-from mpc import util
 from torch import nn
 from torch.autograd import Variable
 from torch.nn import Parameter
@@ -120,7 +119,8 @@ class RechtDx(nn.Module):
         y = self.A @ x + u
         return y
         
-
+def get_data_maybe(x):
+    return x if not isinstance(x, Variable) else x.data
 class CartpoleDx(nn.Module):
     def __init__(self, params=None):
         super().__init__()
@@ -193,7 +193,7 @@ class CartpoleDx(nn.Module):
         return state
 
     def get_frame(self, state, ax=None):
-        state = util.get_data_maybe(state.view(-1))
+        state = get_data_maybe(state.view(-1))
         assert len(state) == 4
         x, dx, th, dth = torch.unbind(state)
         cos_th, sin_th = torch.cos(th), torch.sin(th)

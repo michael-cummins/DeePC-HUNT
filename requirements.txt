@@ -1,6 +1,0 @@
-ipykernel
-seaborn
-tqdm
-gym==0.26.2
-mujoco==2.3.7
-imageio
