@@ -1,4 +1,4 @@
-from utils import block_hankel, block_hankel_torch
+from .utils import block_hankel, block_hankel_torch
 import torch
 import torch.nn as nn
 from torch.nn.parameter import Parameter

@@ -1,7 +1,6 @@
 import numpy as np
 import matplotlib.pyplot as plt
 import torch
-from mpc import util
 from torch import nn
 from torch.autograd import Variable
 from torch.nn import Parameter
@@ -14,15 +13,17 @@ def episode_loss(Y : torch.Tensor, U : torch.Tensor, G : torch.Tensor, controlle
     G should be shape(batch, T, Td-Tini-N+1)
     If doing reference tracking, Y and U are expected to be in delta formulation
     """
-    n_batch = G.shape[0]
-    T = G.shape[1]
-    phi = torch.Tensor().to(controller.device)
 
+    n_batch = G.shape[0]
+    T = Y.shape[1]
+    phi = torch.Tensor().to(controller.device)
+    # Y = Y.reshape((Y.shape[0], Y.shape[1]*Y.shape[2],1))
+    # print(Y.shape)
     # Not sure if I should include the cost/regularisation weights
     Q, R = torch.diag(controller.q).to(controller.device), torch.diag(controller.r).to(controller.device)
     # ly = controller.lam_y.data if controller.stochastic else 0
     # (lg1, lg2) = (controller.lam_g1, controller.lam_g2) if not controller.linear else (0, 0) 
-
+ 
     for i in range(n_batch):
         Ct, Cr = 0, 0
         for j in range(T):
@@ -34,7 +35,7 @@ def episode_loss(Y : torch.Tensor, U : torch.Tensor, G : torch.Tensor, controlle
                 Cr += torch.norm(Ey[i,j,:], p=1) 
             if controller.stochastic_u:
                 Cr += torch.norm(Eu[i,j,:], p=1)
-        phi = torch.cat((phi, Ct+Cr), axis=0)
+        phi = torch.cat((phi, Ct), axis=0)
     loss = torch.sum(phi)/n_batch
     return loss
 
@@ -118,7 +119,8 @@ class RechtDx(nn.Module):
         y = self.A @ x + u
         return y
         
-
+def get_data_maybe(x):
+    return x if not isinstance(x, Variable) else x.data
 class CartpoleDx(nn.Module):
     def __init__(self, params=None):
         super().__init__()
@@ -191,7 +193,7 @@ class CartpoleDx(nn.Module):
         return state
 
     def get_frame(self, state, ax=None):
-        state = util.get_data_maybe(state.view(-1))
+        state = get_data_maybe(state.view(-1))
         assert len(state) == 4
         x, dx, th, dth = torch.unbind(state)
         cos_th, sin_th = torch.cos(th), torch.sin(th)
