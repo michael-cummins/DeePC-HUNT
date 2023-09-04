@@ -1,7 +1,7 @@
 # DeePC-HUNT
 ### Data enabled predictive control hyperparameter tuning via differentiable optimization layers
 
-DeePC-HUNT is a method for optimising over the hyperparameters of DeePC, using anlaytical policy gradients. This method has been developed as part of my bachelor thesis, carried out at the [automatic control lab](https://control.ee.ethz.ch/). Supervised by [Alberto Padoan](https://www.albertopadoan.com/), [Keith Moffat](https://www.keithmoffat.com/) and [Florian Dorfler](http://people.ee.ethz.ch/~floriand/). 
+DeePC-HUNT is a method for optimising over the hyperparameters of DeePC using [anlaytical policy gradients](https://arxiv.org/abs/2202.00817) and [differentiable optimization layers](https://locuslab.github.io/2019-10-28-cvxpylayers/). This method has been developed as part of my bachelor thesis, carried out at the [automatic control lab](https://control.ee.ethz.ch/). Supervised by [Alberto Padoan](https://www.albertopadoan.com/), [Keith Moffat](https://www.keithmoffat.com/) and [Florian Dorfler](http://people.ee.ethz.ch/~floriand/). 
 
 Developed in a conda environment on Ubuntu 22.04 with python 3.10. 
 
@@ -16,7 +16,7 @@ Or clone the repo and install via
 ```
 cd DeePC-HUNT && pip install -e .
 ```
-All extra packages necessary for running the example notebookds are in examples/requirements.txt. If needed,
+Extra packages necessary for running the example notebooks are in examples/requirements.txt if needed.
 ```
 pip install -r examples/requirements.txt
 ```
@@ -27,7 +27,7 @@ DeePC-HUNT has the following dependancies.
 * [CvxpyLayers](https://github.com/cvxgrp/cvxpylayers) >= 1.0
 
 ## Usage
-Data-​enabled Predictive Control ([DeePC](https://arxiv.org/abs/1811.05890)) is a data-​driven non-​parametric algorithm for combined identification (learning) and control of dynamical systems. It leverages on the solution of the following optimization problem in a receding horizon fashion
+Data-​enabled Predictive Control ([DeePC](https://arxiv.org/abs/1811.05890)) is a data-​driven non-​parametric algorithm for combined identification (learning) and control of dynamical systems. It leverages on the solution of the following optimization problem in a receding horizon fashion.
 
 ![Problem Formulation](https://github.com/michael-cummins/DeePC-HUNT/blob/main/videos/deepc_problem.png)
 

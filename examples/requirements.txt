@@ -1,3 +1,4 @@
 ipykernel
 seaborn
 tqdm
+matplotlib
