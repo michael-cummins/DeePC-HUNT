@@ -8,7 +8,7 @@ Developed in a conda environment on Ubuntu 22.04 with python 3.10.
 Differentiable DeePC layer is inspired by [Differentiable MPC](https://github.com/locuslab/differentiable-mpc) and built using [CvxpyLayers](https://github.com/cvxgrp/cvxpylayers).
 
 ## Installation
-install via pip
+Install via pip
 ```
 pip install deepc_hunt
 ```
