@@ -27,7 +27,7 @@ DeePC-HUNT has the following dependencies.
 * [CvxpyLayers](https://github.com/cvxgrp/cvxpylayers) >= 1.0
 
 ## Usage
-Data-enabled Predictive Control ([DeePC](https://arxiv.org/abs/1811.05890)) is a data-driven non-parametric algorithm for combined identification (learning) and control of dynamical systems. It leverages on the solution of the following optimization problem in a receding horizon fashion.
+Data-enabled Predictive Control ([DeePC](https://arxiv.org/abs/1811.05890)) is a data-driven non-parametric algorithm for combined identification (learning) and control of dynamical systems. It leverages the solution of the following optimization problem in a receding horizon fashion.
 
 ![Problem Formulation](https://github.com/michael-cummins/DeePC-HUNT/blob/main/videos/deepc_problem.png)
 <!-- **DeePC Problem Formulation**
@@ -39,11 +39,11 @@ $$\begin{pmatrix} 1 & 2 & 3 \end{pmatrix}$$
     
 $$u \in \mathcal{U}, y \in \mathcal{Y}$$ -->
 
-DeePC can achieve performance that rivals MPC on non-linear and stochastic systems ([see here](https://arxiv.org/abs/2101.01273)), but is highly sensitive to the choice of regularization parameters $\theta_i$. DeePC-HUNT addresses this problem by automatically tuning these parameters. The performance of DeePC-HUNT has been validated on a noisy [cartpole](https://github.com/michael-cummins/DeePC-HUNT/ddeepc/cartpole_ddeepc.ipynb) and [LTI](https://github.com/michael-cummins/DeePC-HUNT/ddeepc/linear_ddeepc.ipynb) system. To run these example notebooks, you can clone this directory and open it in a VS-Code enviornment with the Jupyter Notebook extension
+DeePC can achieve performance that rivals MPC on non-linear and stochastic systems ([see here](https://arxiv.org/abs/2101.01273)) but is highly sensitive to the choice of regularization parameters $\theta_i$. DeePC-HUNT addresses this problem by automatically tuning these parameters. The performance of DeePC-HUNT has been validated on a noisy [cartpole](https://github.com/michael-cummins/DeePC-HUNT/ddeepc/cartpole_ddeepc.ipynb) and [LTI](https://github.com/michael-cummins/DeePC-HUNT/ddeepc/linear_ddeepc.ipynb) system. To run these example notebooks, you can clone this directory and open it in a VS-Code environment with the Jupyter Notebook extension
 
 ### Cartpole - before training
 
-DeePC controller initialised, with $\theta = (200,200,200,200)$, controlling the horizontal force applied to the cartpole system iwth a regulation objective.
+DeePC controller initialised, with $\theta = (200,200,200,200)$, controlling the horizontal force applied to the cartpole system with a regulation objective.
 
 https://github.com/michael-cummins/DeePC-HUNT/assets/72135336/1c73ca21-91c1-4669-a04d-1d9a103d9d48
 
