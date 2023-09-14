@@ -35,7 +35,7 @@ $$\min_{y,u,g,\sigma_y,\sigma_u} \sum_{i=0}^{T-1} ||y_i - r_{t+i}||_Q^2 + ||u_i|
     
 $$\textrm{subject to} \begin{pmatrix} U_p \\ Y_p \\ U_f \\ Y_f \end{pmatrix}g = \begin{pmatrix} u_\textrm{ini} \\ y_\textrm{ini}  \\ u \\ y \end{pmatrix} + \begin{pmatrix} \sigma_u \\ \sigma_y \\ 0 \\ 0 \end{pmatrix} $$
 
-$$\begin{pmatrix} 1\\2\\3 \end{pmatrix}$$
+$$\begin{pmatrix} 1 \\ 2 \\ 3 \end{pmatrix}$$
     
 $$u \in \mathcal{U}, y \in \mathcal{Y}$$
 
