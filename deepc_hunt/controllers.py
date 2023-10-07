@@ -169,6 +169,8 @@ class DDeePC(nn.Module):
         """
         
         self.T = int(len(ud))
+        self.ud = ud
+        self.yd = yd
         self.Tini = Tini
         self.N = N
         self.p = p
@@ -279,6 +281,7 @@ class DDeePC(nn.Module):
 
         variables = [g, e, self.u, self.y]
         params = [Q_block_sqrt, R_block_sqrt, u_ini, y_ini, ref]
+        
         if not linear:
             params.append(l_g1)
             params.append(l_g2)
