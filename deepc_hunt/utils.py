@@ -7,6 +7,7 @@ from torch.nn import Parameter
 
 def episode_loss(Y : torch.Tensor, U : torch.Tensor, G : torch.Tensor, controller, PI,
                  Ey=None, Eu=None) -> torch.Tensor:
+    
     """
     Calculate loss for for batch trajectory - pretty inificient, look into vectorizing
     Y should be shape(batch, T, p) - T is length of trajectory
@@ -17,12 +18,7 @@ def episode_loss(Y : torch.Tensor, U : torch.Tensor, G : torch.Tensor, controlle
     n_batch = G.shape[0]
     T = Y.shape[1]
     phi = torch.Tensor().to(controller.device)
-    # Y = Y.reshape((Y.shape[0], Y.shape[1]*Y.shape[2],1))
-    # print(Y.shape)
-    # Not sure if I should include the cost/regularisation weights
     Q, R = torch.diag(controller.q).to(controller.device), torch.diag(controller.r).to(controller.device)
-    # ly = controller.lam_y.data if controller.stochastic else 0
-    # (lg1, lg2) = (controller.lam_g1, controller.lam_g2) if not controller.linear else (0, 0) 
  
     for i in range(n_batch):
         Ct, Cr = 0, 0
@@ -31,16 +27,16 @@ def episode_loss(Y : torch.Tensor, U : torch.Tensor, G : torch.Tensor, controlle
             if not controller.linear:
                 Cr += torch.norm((PI)@G[i,j,:], p=2)**2
                 Cr += torch.norm((PI)@G[i,j,:], p=1)
-            if controller.stochastic_y:
+            if Ey:
                 Cr += torch.norm(Ey[i,j,:], p=1) 
-            if controller.stochastic_u:
+            if Eu:
                 Cr += torch.norm(Eu[i,j,:], p=1)
         phi = torch.cat((phi, Ct), axis=0)
     loss = torch.sum(phi)/n_batch
     return loss
 
-
 def sample_initial_signal(Tini : int, p : int, m : int, batch : int, ud : np.array, yd : np.array) -> torch.Tensor:
+   
     """
     Samples initial signal trajectory from system data
     args:
@@ -51,6 +47,7 @@ def sample_initial_signal(Tini : int, p : int, m : int, batch : int, ud : np.arr
         ud  = System input data
         yd = system output data
     """
+   
     high = 15
     index = np.random.uniform(size=(batch,), low=0, high=high).astype(np.uint8)
     if ud.ndim > 1:
@@ -91,15 +88,17 @@ def block_hankel_torch(w: torch.Tensor, L: int, d: int) -> torch.Tensor:
 
 class Projection(object):
 
-    def __init__(self, frequency=1):
+    def __init__(self, frequency=1, lower=1e-4, upper=1e4):
         self.frequency = frequency
+        self.lower = lower 
+        self.upper = upper
 
     def __call__(self, module):
         # filter the variables to get the ones you want
         # if hasattr(module, 'weight'):
         for param in module.parameters():
             w = param.data
-            w = w.clamp(10e-4,10e3)
+            w = w.clamp(self.lower,self.upper)
             param.data = w
 
 class RechtDx(nn.Module):

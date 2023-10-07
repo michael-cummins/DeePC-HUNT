@@ -3,7 +3,7 @@ import torch
 import torch.nn as nn 
 import torch.optim as optim
 from tqdm import tqdm
-from deepc_hunt.utils import sample_initial_signal, episode_loss, AffineDynamics, Projection
+from deepc_hunt.utils import sample_initial_signal, episode_loss, Projection
 
 class Trainer:
 
@@ -43,7 +43,7 @@ class Trainer:
                 
                 # Solve for input
                 decision_vars = self.controller(ref=None, uref=None, u_ini=u_ini, y_ini=y_ini)
-                [g, u_pred, y_pred] = decision_vars[:3]
+                [g, u_pred] = decision_vars[:2]
                 
                 sig_y = decision_vars[3] if Ey else None
                 sig_u = decision_vars[4] if Eu else None
