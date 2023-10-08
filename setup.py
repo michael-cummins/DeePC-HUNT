@@ -14,7 +14,7 @@ setup(
     url='https://github.com/michael-cummins/DeePC-HUNT',
     install_requires=[
         'numpy>=1.25.2',
-        'cvxpylayers>=1.0',
+        'cvxpylayers>=0.1',
         'torch>=1.0',
     ],
     classifiers=[

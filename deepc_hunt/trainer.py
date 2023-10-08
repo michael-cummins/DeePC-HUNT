@@ -1,4 +1,3 @@
-from deepc_hunt.controllers import DDeePC
 import torch
 import torch.nn as nn 
 import torch.optim as optim
@@ -13,10 +12,10 @@ class Trainer:
         self.opt = optim.Rprop(self.controller.parameters(), lr=0.01, step_sizes=(1e-3,1e2))
         self.projection = Projection()
 
-    def run(self, epochs, time_steps, noise_gen_u=None):
-        pbar = tqdm(range(epochs), ncols=180)
+    def run(self, epochs, time_steps):
+        pbar = tqdm(range(epochs), ncols=100)
         
-        for epoch in pbar:
+        for _ in pbar:
             
             # Get random initial signal from data
             u_ini, y_ini = sample_initial_signal(
@@ -39,26 +38,26 @@ class Trainer:
             U = torch.Tensor().to(self.controller.device)
 
             # Begin simulation 
-            for step in range(time_steps):
+            for _ in range(time_steps):
                 
                 # Solve for input
                 decision_vars = self.controller(ref=None, uref=None, u_ini=u_ini, y_ini=y_ini)
                 [g, u_pred] = decision_vars[:2]
                 
-                sig_y = decision_vars[3] if Ey else None
-                sig_u = decision_vars[4] if Eu else None
+                sig_y = decision_vars[3] if Ey is not None else None
+                sig_u = decision_vars[4] if Eu is not None else None
 
                 # Apply input to simulation
                 action = u_pred[:,:self.controller.m] 
-                obs = self.env(y_ini[:,-self.controller.p:], action)
+                obs = self.env.forward(y_ini[:,-self.controller.p:], action)
 
                 G = torch.cat((G, g.unsqueeze(1)), axis=1)
                 U = torch.cat((U, action.unsqueeze(1)), axis=1)
                 Y = torch.cat((Y, obs.unsqueeze(1)), axis=1)
                 
-                if Eu:
+                if Eu is not None:
                     Eu = torch.cat((Eu, sig_u.unsqueeze(1)), axis=1)
-                if Ey:
+                if Ey is not None:
                     Ey = torch.cat((Ey, sig_y.unsqueeze(1)), axis=1)
 
                 # Update initial condition
@@ -73,3 +72,8 @@ class Trainer:
             self.opt.step()
             self.controller.apply(self.projection)
             pbar.set_description(f'Loss = {loss.item():.4f}')
+        
+        for name, param in self.controller.named_parameters():
+            print(f'Name : {name}, Value : {param.data}')
+
+        return [param for param in self.controller.parameters()]

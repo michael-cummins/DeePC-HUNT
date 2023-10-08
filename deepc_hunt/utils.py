@@ -27,9 +27,9 @@ def episode_loss(Y : torch.Tensor, U : torch.Tensor, G : torch.Tensor, controlle
             if not controller.linear:
                 Cr += torch.norm((PI)@G[i,j,:], p=2)**2
                 Cr += torch.norm((PI)@G[i,j,:], p=1)
-            if Ey:
+            if Ey is not None:
                 Cr += torch.norm(Ey[i,j,:], p=1) 
-            if Eu:
+            if Eu is not None:
                 Cr += torch.norm(Eu[i,j,:], p=1)
         phi = torch.cat((phi, Ct), axis=0)
     loss = torch.sum(phi)/n_batch
@@ -234,8 +234,11 @@ class AffineDynamics(nn.Module):
         self.A = Parameter(A)
         self.B = Parameter(B)
         self.c = Parameter(c) if c is not None else c
+        self.obs_noise_std = 0.1
+        self.input_noise_std = 0.1
 
     def forward(self, x, u):
+
 
         x_dim, u_dim = x.ndimension(), u.ndimension()
         if x_dim == 1:
@@ -243,14 +246,15 @@ class AffineDynamics(nn.Module):
         if u_dim == 1:
             u = u.unsqueeze(0)
         
-        # print(f'x:{x.device}, u:{u.device}, A:{self.A.device}, B:{self.B.device}')
-        z = x.mm(self.A) + u.mm(self.B) 
+        u += torch.randn(u.shape) * self.input_noise_std
+        
+        z = x@self.A + u@self.B
         z += self.c if self.c is not None else 0
 
         if x_dim == 1:
             z = z.squeeze(0)
 
-        return z
+        return z + torch.randn(z.shape).to(z.device) * self.obs_noise_std
 
 def tensor2np(tensor : torch.Tensor) -> np.ndarray:
     return tensor.detach().cpu().numpy()
