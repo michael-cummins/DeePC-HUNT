@@ -20,7 +20,7 @@ def episode_loss(Y : torch.Tensor, U : torch.Tensor, G : torch.Tensor, controlle
     T = Y.shape[1]
     phi = torch.Tensor().to(controller.device)
     Q, R = torch.diag(controller.q).to(controller.device), torch.diag(controller.r).to(controller.device)
- 
+    
     for i in range(n_batch):
         Ct, Cr = 0, 0
         for j in range(T):
@@ -101,23 +101,6 @@ class Projection(object):
             w = param.data
             w = w.clamp(self.lower,self.upper)
             param.data = w
-
-class RechtDx(nn.Module):
-    """
-    torch enviornment for simple recht temperature control system
-    """
-    def __init__(self) -> None:
-        super().__init__()
-        self.A = torch.Tensor([[1.01, 0.01, 0.00], 
-                [0.01, 1.01, 0.01], 
-                [0.00, 0.01, 1.01]])
-        
-    def forward(self, x : torch.Tensor, u : torch.Tensor) -> torch.Tensor:
-        if x.ndim > 1:
-            batch_size = x.shape[0]
-            self.A = self.A.repeat(batch_size, 1, 1)
-        y = self.A @ x + u
-        return y
 
 
 def tensor2np(tensor : torch.Tensor) -> np.ndarray:

@@ -77,7 +77,7 @@ class AffineDynamics(nn.Module):
         if u_dim == 1:
             u = u.unsqueeze(0)
         
-        u += torch.randn(u.shape) * self.input_noise_std
+        #u += torch.randn(u.shape) * self.input_noise_std
         
         z = x@self.A + u@self.B
         z += self.c if self.c is not None else 0
@@ -85,7 +85,7 @@ class AffineDynamics(nn.Module):
         if x_dim == 1:
             z = z.squeeze(0)
 
-        return z + torch.randn(z.shape).to(z.device) * self.obs_noise_std
+        return z #+ torch.randn(z.shape).to(z.device) * self.obs_noise_std
 
 class CartpoleDx(nn.Module):
     def __init__(self, params=None):
@@ -149,7 +149,7 @@ class CartpoleDx(nn.Module):
 
         return state
     
-    def get_data_maybe(x):
+    def get_data_maybe(self, x):
         return x if not isinstance(x, Variable) else x.data
 
     def get_frame(self, state, ax=None):
