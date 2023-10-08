@@ -71,7 +71,11 @@ class Trainer:
             loss.backward(retain_graph=True)
             self.opt.step()
             self.controller.apply(self.projection)
-            pbar.set_description(f'Loss = {loss.item():.4f}')
+            
+            description = f'Loss = {loss.item():.4f}, '
+            for name, param in self.controller.named_parameters():
+                description += f'{name} : {param.data.item():.3f}, '
+            pbar.set_description(description)
         
         for name, param in self.controller.named_parameters():
             print(f'Name : {name}, Value : {param.data}')

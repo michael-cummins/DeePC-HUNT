@@ -14,7 +14,8 @@ def episode_loss(Y : torch.Tensor, U : torch.Tensor, G : torch.Tensor, controlle
     G should be shape(batch, T, Td-Tini-N+1)
     If doing reference tracking, Y and U are expected to be in delta formulation
     """
-
+    
+    PI = torch.Tensor(PI) if isinstance(PI, np.ndarray) else PI
     n_batch = G.shape[0]
     T = Y.shape[1]
     phi = torch.Tensor().to(controller.device)
@@ -117,144 +118,7 @@ class RechtDx(nn.Module):
             self.A = self.A.repeat(batch_size, 1, 1)
         y = self.A @ x + u
         return y
-        
-def get_data_maybe(x):
-    return x if not isinstance(x, Variable) else x.data
-class CartpoleDx(nn.Module):
-    def __init__(self, params=None):
-        super().__init__()
 
-        self.n_state = 4
-        self.n_ctrl = 1
-
-        # model parameters
-        if params is None:
-            # gravity, masscart, masspole, length
-            self.params = Variable(torch.Tensor((9.8, 1.0, 0.1, 0.5)))
-        else:
-            self.params = params
-        assert len(self.params) == 4
-        self.force_mag = 3.
-
-        self.theta_threshold_radians = np.pi#12 * 2 * np.pi / 360
-        self.x_threshold = 2.4
-        self.max_velocity = 10
-
-        self.dt = 0.05
-
-        self.lower = -self.force_mag
-        self.upper = self.force_mag
-
-        # 0  1      2        3   4
-        # x dx cos(th) sin(th) dth
-        self.goal_state = torch.Tensor(  [ 0.,  0., 0.,   0.])
-        self.goal_weights = torch.Tensor([100, 100,  100, 100])
-        self.ctrl_penalty = 0.01
-
-        self.mpc_eps = 1e-4
-        self.linesearch_decay = 0.5
-        self.max_linesearch_iter = 2
-
-    def forward(self, state, u):
-        squeeze = state.ndimension() == 1
-
-        if squeeze:
-            state = state.unsqueeze(0)
-            u = u.unsqueeze(0)
-
-        if state.is_cuda and not self.params.is_cuda:
-            self.params = self.params.cuda()
-        gravity, masscart, masspole, length = torch.unbind(self.params)
-        total_mass = masspole + masscart
-        polemass_length = masspole * length
-
-        u = torch.clamp(u[:,0], -self.force_mag, self.force_mag)
-
-        x, dx, th, dth = torch.unbind(state, dim=1)
-        # th = torch.atan2(sin_th, cos_th)
-        cos_th, sin_th = torch.cos(th), torch.sin(th)
-
-        cart_in = (u + polemass_length * dth**2 * sin_th) / total_mass
-        th_acc = (gravity * sin_th - cos_th * cart_in) / \
-                 (length * (4./3. - masspole * cos_th**2 /
-                                     total_mass))
-        xacc = cart_in - polemass_length * th_acc * cos_th / total_mass
-
-        x = x + self.dt * dx
-        dx = dx + self.dt * xacc
-        th = th + self.dt * dth
-        dth = dth + self.dt * th_acc
-
-        state = torch.stack((
-            x, dx, th, dth
-        ), 1)
-
-        return state
-
-    def get_frame(self, state, ax=None):
-        state = get_data_maybe(state.view(-1))
-        assert len(state) == 4
-        x, dx, th, dth = torch.unbind(state)
-        cos_th, sin_th = torch.cos(th), torch.sin(th)
-        gravity, masscart, masspole, length = torch.unbind(self.params)
-        th = torch.arctan2(sin_th, cos_th)
-        th_x = sin_th*length
-        th_y = cos_th*length
-
-        if ax is None:
-            fig, ax = plt.subplots(figsize=(6,6))
-        else:
-            fig = ax.get_figure()
-        x, th_x, th_y, length = tensor2np(x), tensor2np(th_x), tensor2np(th_y), tensor2np(length)
-        ax.plot((x,x+th_x), (0, th_y), color='k')
-        ax.set_xlim((-length*2, length*2))
-        ax.set_ylim((-length*2, length*2))
-        return fig, ax
-
-    def get_true_obj(self):
-        q = torch.cat((
-            self.goal_weights,
-            self.ctrl_penalty*torch.ones(self.n_ctrl)
-        ))
-        assert not hasattr(self, 'mpc_lin')
-        px = -torch.sqrt(self.goal_weights)*self.goal_state #+ self.mpc_lin
-        p = torch.cat((px, torch.zeros(self.n_ctrl)))
-        return Variable(q), Variable(p)
-    
-
-class AffineDynamics(nn.Module):
-    def __init__(self, A, B, c=None):
-        super(AffineDynamics, self).__init__()
-
-        assert A.ndimension() == 2
-        assert B.ndimension() == 2
-        if c is not None:
-            assert c.ndimension() == 1
-
-        self.A = Parameter(A)
-        self.B = Parameter(B)
-        self.c = Parameter(c) if c is not None else c
-        self.obs_noise_std = 0.1
-        self.input_noise_std = 0.1
-
-    def forward(self, x, u):
-
-
-        x_dim, u_dim = x.ndimension(), u.ndimension()
-        if x_dim == 1:
-            x = x.unsqueeze(0)
-        if u_dim == 1:
-            u = u.unsqueeze(0)
-        
-        u += torch.randn(u.shape) * self.input_noise_std
-        
-        z = x@self.A + u@self.B
-        z += self.c if self.c is not None else 0
-
-        if x_dim == 1:
-            z = z.squeeze(0)
-
-        return z + torch.randn(z.shape).to(z.device) * self.obs_noise_std
 
 def tensor2np(tensor : torch.Tensor) -> np.ndarray:
     return tensor.detach().cpu().numpy()
