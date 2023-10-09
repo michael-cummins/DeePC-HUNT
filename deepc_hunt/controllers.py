@@ -14,8 +14,8 @@ class DeePC(nn.Module):
     """
 
     def __init__(self, ud: np.array, yd: np.array, y_constraints: np.array, u_constraints: np.array, 
-                 N: int, Tini: int, p: int, m: int, n_batch: int,
-                 stochastic_y : bool, stochastic_u : bool, linear : bool, device : str,
+                 N: int, Tini: int, p: int, m: int, device : str,
+                 stochastic_y=False, stochastic_u=False, linear=True, n_batch=1,
                  q=None, r=None, lam_y=None, lam_g1=None, lam_g2=None, lam_u=None):
         super().__init__()
 

@@ -48,8 +48,11 @@ def sample_initial_signal(Tini : int, p : int, m : int, batch : int, ud : np.arr
         ud  = System input data
         yd = system output data
     """
-   
-    high = 15
+    
+    T = yd.shape[0]
+    high=T-Tini
+    if batch>T:
+        raise Exception('Biased estimate of closed loop cost')
     index = np.random.uniform(size=(batch,), low=0, high=high).astype(np.uint8)
     if ud.ndim > 1:
         sampled_uini = np.array([ud[ind:Tini + ind, :].reshape((Tini*m,)) for ind in index])
