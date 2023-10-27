@@ -7,7 +7,7 @@ setup(
     name='deepc_hunt',
     version='0.0.6',
     author='Michael Cummins',
-    description='PyTorch module for DeePC',
+    description='PyTorch module and auto-tuner for DeePC',
     long_description=long_description,
     long_description_content_type="text/markdown",
     packages=find_packages(),

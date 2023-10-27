@@ -10,7 +10,7 @@ class Trainer:
         self.controller = controller
         self.env = env
         self.opt = optim.Rprop(self.controller.parameters(), lr=0.01, step_sizes=(1e-3,1e2))
-        self.projection = Projection()
+        self.projection = Projection(lower=1e-5, upper=1e5)
 
     def run(self, epochs, time_steps):
         pbar = tqdm(range(epochs), ncols=100)
