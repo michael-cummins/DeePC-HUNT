@@ -7,136 +7,15 @@ import numpy as np
 import cvxpy as cp
 import time
 
-class DeePC:
-
-    """
-    Vanilla regularized DeePC module
-    """
-
-    def __init__(self, ud: np.array, yd: np.array, y_constraints: np.array, u_constraints: np.array, 
-                 N: int, Tini: int, n: int, T: int, p: int, m: int) -> None:
-       
-        """
-        Initialise variables
-        args:
-            ud = Inpiut signal data
-            yd = output signal data
-            N = predicition horizon
-            n = dimesnion of system
-            p = output signla dimension
-            m = input signal dimension
-        """
-
-        self.T = T
-        self.Tini = Tini
-        self.n = n 
-        self.N = N
-        self.p = p
-        self.m = m
-        self.y_constraints = y_constraints
-        self.u_constraints = u_constraints
-
-        # Check for full row rank
-        H = block_hankel(w=ud.reshape((m*T,)), L=Tini+N+n, d=m)
-        rank = np.linalg.matrix_rank(H)
-        if rank != H.shape[0]:
-            raise ValueError('Data is not persistently exciting')
-        
-        # Construct data matrices
-        U = block_hankel(w=ud.reshape((m*T,)), L=Tini+N, d=m)
-        Y = block_hankel(w=yd.reshape((p*T,)), L=Tini+N, d=p)
-        self.Up = U[0:m*Tini,:]
-        self.Yp = Y[0:p*Tini,:]
-        self.Uf = U[Tini*m:,:]
-        self.Yf = Y[Tini*p:,:]
-
-        # Initialise Optimisation variables
-        self.u = cp.Variable(self.N*self.m)
-        self.g = cp.Variable(self.T-self.Tini-self.N+1)
-        self.y = cp.Variable(self.N*self.p)
-        self.sig_y = cp.Variable(self.Tini*self.p)
-
-        # Regularization Variables
-        PI = np.vstack([self.Up, self.Yp, self.Uf])
-        PI = np.linalg.pinv(PI)@PI
-        I = np.eye(PI.shape[0])
-        self.PI = I - PI
-        
-    
-    def setup(self, ref: np.array, u_ini: np.array, y_ini: np.array, Q : np.array, R : np.array,
-               lam_g1=None, lam_g2=None, lam_y=None) -> None:
-       
-        """
-        Set up controller constraints and cost function.
-        Also used online during sim to update u_ini, y_ini, reference and regularizers
-        args:
-            ref = reference signal
-            u_ini = initial input trajectory
-            y_ini = initial output trajectory
-            lam_g1, lam_g2 = regularization params for nonlinear systems
-            lam_y = regularization params for stochastic systems
-        """
-
-        self.lam_y = lam_y
-        self.lam_g1 = lam_g1
-        self.lam_g2 = lam_g2
-        self.Q = np.kron(np.eye(self.N), Q)
-        self.R = np.kron(np.eye(self.N), R)
-        self.cost = cp.quad_form(self.y-ref, cp.psd_wrap(self.Q)) + cp.quad_form(self.u, cp.psd_wrap(self.R))
-
-        if self.lam_y != None:
-            self.cost += cp.norm(self.sig_y, 1)*self.lam_y
-            self.constraints = [
-                self.Up@self.g == u_ini,
-                self.Yp@self.g == y_ini + self.sig_y,
-                self.Uf@self.g == self.u,
-                self.Yf@self.g == self.y,
-                cp.abs(self.u) <= self.u_constraints,
-                cp.abs(self.y) <= self.y_constraints,
-                self.y[-self.p:] == ref[-self.p:]
-            ]
-        else:
-            self.constraints = [
-                self.Up@self.g == u_ini,
-                self.Yp@self.g == y_ini,
-                self.Uf@self.g == self.u,
-                self.Yf@self.g == self.y,
-                cp.abs(self.u) <= self.u_constraints,
-                cp.abs(self.y) <= self.y_constraints,
-                self.y[-self.p:] == ref[-self.p:]
-            ]
-
-        if self.lam_g1 != None or self.lam_g2 != None:
-            self.cost += cp.sum_squares(self.PI@self.g)*lam_g1 + cp.norm(self.g, 1)*lam_g2
-            
-
-    def solve(self, verbose=False, solver=cp.MOSEK) -> np.ndarray:
-        
-        """
-        Call once the controller is set up with relevenat parameters.
-        Returns the first action of input sequence.
-        args:
-            solver = cvxpy solver, usually use MOSEK
-            verbose = bool for printing status of solver
-        """
-
-        prob = cp.Problem(cp.Minimize(self.cost), self.constraints)
-        assert prob.is_dpp()
-        assert prob.is_dcp()
-        prob.solve(solver=solver, verbose=verbose)
-        action = prob.variables()[1].value[:self.m]
-        obs = prob.variables()[0].value # For imitation loss
-        return action, obs
-
-class DDeePC(nn.Module):
+class DeePC(nn.Module):
 
     """
     Differentiable DeePC Module
     """
 
     def __init__(self, ud: np.array, yd: np.array, y_constraints: np.array, u_constraints: np.array, 
-                 N: int, Tini: int, p: int, m: int, n_batch: int,
-                 stochastic_y : bool, stochastic_u : bool, linear : bool, device : str,
+                 N: int, Tini: int, p: int, m: int, device : str,
+                 stochastic_y=False, stochastic_u=False, linear=True, n_batch=1,
                  q=None, r=None, lam_y=None, lam_g1=None, lam_g2=None, lam_u=None):
         super().__init__()
 
@@ -168,7 +47,10 @@ class DDeePC(nn.Module):
                     -> if left as none, randomly initialise as torch parameter 
         """
         
-        self.T = int(len(ud))
+        self.T = ud.shape[0]
+        print(self.T)
+        self.ud = ud
+        self.yd = yd
         self.Tini = Tini
         self.N = N
         self.p = p
@@ -180,6 +62,10 @@ class DDeePC(nn.Module):
         self.device = device # TODO: Shouldn't have to do this
         self.linear = linear
         self.n_batch = n_batch
+        self.lam_g1 = lam_g1
+        self.lam_g2 = lam_g2
+        self.lam_u = lam_u
+        self.lam_y = lam_y
 
         # Initialise torch parameters
         if isinstance(q, torch.Tensor):
@@ -267,11 +153,13 @@ class DDeePC(nn.Module):
             self.Yf@g == self.y,
             cp.abs(self.u) <= self.u_constraints,
             cp.abs(self.y) <= self.y_constraints,
-            self.y[-self.p:] == ref[-self.p:]
+            self.u[::3] >= 0 # Just for rocket
+            # self.y[-self.p:] == ref[-self.p:]
         ]
+        print(f'length of constraints before noise : {len(constraints)}')
         constraints.append(self.Up@g == u_ini + sig_u) if self.stochastic_u else constraints.append(self.Up@g == u_ini)
         constraints.append(self.Yp@g == y_ini + sig_y) if self.stochastic_y else constraints.append(self.Yp@g == y_ini)
-
+        print(f'length of constraints after noise : {len(constraints)}')
         # Initialise optimization problem
         problem = cp.Problem(cp.Minimize(cost), constraints)
         assert problem.is_dcp()
@@ -279,6 +167,7 @@ class DDeePC(nn.Module):
 
         variables = [g, e, self.u, self.y]
         params = [Q_block_sqrt, R_block_sqrt, u_ini, y_ini, ref]
+        
         if not linear:
             params.append(l_g1)
             params.append(l_g2)
@@ -292,13 +181,6 @@ class DDeePC(nn.Module):
             params.append(l_u)
 
         self.QP_layer = CvxpyLayer(problem=problem, parameters=params, variables=variables)
-
-    def get_PI(self):
-        # Constant for sum_squares regularization on g
-        PI = np.vstack([self.Up, self.Yp, self.Uf])
-        PI = np.linalg.pinv(PI)@PI
-        I = np.eye(PI.shape[0])
-        return I, PI
     
     def forward(self, ref: torch.Tensor, uref: torch.Tensor, u_ini: torch.Tensor, y_ini: torch.Tensor) -> list[torch.Tensor]:
 
@@ -336,7 +218,7 @@ class DDeePC(nn.Module):
         if self.stochastic_u:
             params.append(self.lam_u.repeat(self.n_batch,1))
 
-        out = self.QP_layer(*params, solver_args={"solve_method": "SCS"})
+        out = self.QP_layer(*params, solver_args={"solve_method": "ECOS"})
         g, input, output = out[0], out[2], out[3]
         vars = [g, input, output]
         
@@ -345,3 +227,155 @@ class DDeePC(nn.Module):
 
         return vars
 
+    def get_PI(self):
+        # Constant for sum_squares regularization on g
+        PI = np.vstack([self.Up, self.Yp, self.Uf])
+        PI = np.linalg.pinv(PI)@PI
+        I = np.eye(PI.shape[0])
+        return I, PI
+
+    def initialise(self, lam_y=None, lam_u=None, lam_g1=None, lam_g2=None):
+        if self.lam_g1 is not None:
+            self.lam_g1.data = torch.Tensor([lam_g1])
+        if self.lam_g2 is not None:
+            self.lam_g2.data = torch.Tensor([lam_g2])
+        if self.lam_y is not None:
+            self.lam_y.data = torch.Tensor([lam_y])
+        if self.lam_u is not None:
+            self.lam_u.data = torch.Tensor([lam_u])
+
+
+class npDeePC:
+
+    """
+    Vanilla regularized DeePC module
+    """
+
+    def __init__(self, ud: np.array, yd: np.array, y_constraints: np.array, u_constraints: np.array, 
+                 N: int, Tini: int, n: int, p: int, m: int) -> None:
+       
+        """
+        Initialise variables
+        args:
+            ud = Inpiut signal data
+            yd = output signal data
+            N = predicition horizon
+            n = dimesnion of system
+            p = output signla dimension
+            m = input signal dimension
+        """
+
+        self.T = ud.shape[0]
+        self.Tini = Tini
+        self.n = n 
+        self.N = N
+        self.p = p
+        self.m = m
+        self.y_constraints = y_constraints
+        self.u_constraints = u_constraints
+
+        # Check for full row rank
+        H = block_hankel(w=ud.reshape((m*self.T,)), L=Tini+N+n, d=m)
+        rank = np.linalg.matrix_rank(H)
+        if rank != H.shape[0]:
+            raise ValueError('Data is not persistently exciting')
+        
+        # Construct data matrices
+        U = block_hankel(w=ud.reshape((m*self.T,)), L=Tini+N, d=m)
+        Y = block_hankel(w=yd.reshape((p*self.T,)), L=Tini+N, d=p)
+        self.Up = U[0:m*Tini,:]
+        self.Yp = Y[0:p*Tini,:]
+        self.Uf = U[Tini*m:,:]
+        self.Yf = Y[Tini*p:,:]
+
+        # Initialise Optimisation variables and parameters
+        self.u = cp.Variable(self.N*self.m)
+        self.g = cp.Variable(self.T-self.Tini-self.N+1)
+        self.y = cp.Variable(self.N*self.p)
+        self.sig_y = cp.Variable(self.Tini*self.p)
+
+        self.ref = cp.Parameter((self.N*self.p,))
+        self.u_ini = cp.Parameter(self.Tini*self.m)
+        self.y_ini = cp.Parameter(self.Tini*self.p)
+
+        # Regularization Variables
+        PI = np.vstack([self.Up, self.Yp, self.Uf])
+        PI = np.linalg.pinv(PI)@PI
+        I = np.eye(PI.shape[0])
+        self.PI = I - PI
+        
+    
+    def setup(self, Q : np.array, R : np.array, lam_g1=None, lam_g2=None, lam_y=None) -> None:
+       
+        """
+        Set up controller constraints and cost function.
+        Also used online during sim to update u_ini, y_ini, reference and regularizers
+        args:
+            ref = reference signal
+            u_ini = initial input trajectory
+            y_ini = initial output trajectory
+            lam_g1, lam_g2 = regularization params for nonlinear systems
+            lam_y = regularization params for stochastic systems
+        """
+
+        self.lam_y = lam_y
+        self.lam_g1 = lam_g1
+        self.lam_g2 = lam_g2
+        self.Q = np.kron(np.eye(self.N), Q)
+        self.R = np.kron(np.eye(self.N), R)
+        
+        self.cost = cp.quad_form(self.y-self.ref, cp.psd_wrap(self.Q)) + cp.quad_form(self.u, cp.psd_wrap(self.R))
+
+
+        if self.lam_y != None:
+            self.cost += cp.norm(self.sig_y, 1)*self.lam_y
+            self.constraints = [
+                self.Up@self.g == self.u_ini,
+                self.Yp@self.g == self.y_ini + self.sig_y,
+                self.Uf@self.g == self.u,
+                self.Yf@self.g == self.y,
+                cp.abs(self.u) <= self.u_constraints,
+                cp.abs(self.y) <= self.y_constraints,
+                self.u[::3] >= 0
+                # self.y[-self.p:] == ref[-self.p:]
+            ]
+        else:
+            self.constraints = [
+                self.Up@self.g == self.u_ini,
+                self.Yp@self.g == self.y_ini,
+                self.Uf@self.g == self.u,
+                self.Yf@self.g == self.y,
+                cp.abs(self.u) <= self.u_constraints,
+                cp.abs(self.y) <= self.y_constraints,
+                self.u[::3] >= 0
+                # self.y[-self.p:] == ref[-self.p:]
+            ]
+
+        if self.lam_g1 != None:
+            self.cost += cp.sum_squares(self.PI@self.g)*lam_g1 
+        if self.lam_g2 != None:
+            self.cost += cp.norm(self.g, 1)*lam_g2
+        assert self.cost.is_dpp
+
+        self.problem = cp.Problem(cp.Minimize(self.cost), self.constraints)
+
+    def solve(self, ref, u_ini, y_ini, verbose=False, solver=cp.MOSEK) -> np.ndarray:
+        
+        """
+        Call once the controller is set up with relevenat parameters.
+        Returns the first action of input sequence.
+        args:
+            solver = cvxpy solver, usually use MOSEK
+            verbose = bool for printing status of solver
+        """
+
+        # prob = cp.Problem(cp.Minimize(self.cost), self.constraints)
+        # assert prob.is_dpp()
+        # assert prob.is_dcp()
+        self.ref.value = ref
+        self.u_ini.value = u_ini
+        self.y_ini.value = y_ini
+        self.problem.solve(solver=solver, verbose=verbose)
+        action = self.problem.variables()[1].value[:self.m]
+        obs = self.problem.variables()[0].value # For imitation loss
+        return action, obs
