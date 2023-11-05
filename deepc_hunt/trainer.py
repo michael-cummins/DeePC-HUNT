@@ -53,7 +53,7 @@ class Trainer:
             for _ in range(time_steps):
                 
                 # Solve for input
-                decision_vars = self.controller(ref=yref, uref=uref, u_ini=u_ini, y_ini=y_ini)
+                decision_vars = self.controller(ref=yref.to(self.controller.device), uref=uref.to(self.controller.device), u_ini=u_ini, y_ini=y_ini)
                 [g, u_pred] = decision_vars[:2]
                 
                 sig_y = decision_vars[3] if Ey is not None else None
