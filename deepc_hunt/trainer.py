@@ -13,8 +13,16 @@ class Trainer:
         self.projection = Projection(lower=1e-5, upper=1e5)
 
     def run(self, epochs, time_steps):
+
+        torch.autograd.set_detect_anomaly(True)
+
         pbar = tqdm(range(epochs), ncols=100)
         
+        # uref specific for rocket - want it to hover in one place
+        uref = torch.zeros((self.controller.n_batch, self.controller.m*self.controller.N))
+        uref[:,::3] = 0.3228
+
+
         for _ in pbar:
             
             # Get random initial signal from data
@@ -29,6 +37,10 @@ class Trainer:
             y_ini = y_ini.to(self.controller.device)
             uT, yT = u_ini, y_ini
 
+            # Each sim should try stabilize around where it spawned in
+            yref = y_ini[:,-self.controller.p:]
+            yref = yref.repeat(1, self.controller.N)
+
             I, PI = self.controller.get_PI()
 
             G = torch.Tensor().to(self.controller.device)
@@ -41,7 +53,7 @@ class Trainer:
             for _ in range(time_steps):
                 
                 # Solve for input
-                decision_vars = self.controller(ref=None, uref=None, u_ini=u_ini, y_ini=y_ini)
+                decision_vars = self.controller(ref=yref, uref=uref, u_ini=u_ini, y_ini=y_ini)
                 [g, u_pred] = decision_vars[:2]
                 
                 sig_y = decision_vars[3] if Ey is not None else None
@@ -49,7 +61,7 @@ class Trainer:
 
                 # Apply input to simulation
                 action = u_pred[:,:self.controller.m] 
-                obs = self.env.forward(y_ini[:,-self.controller.p:], action)
+                obs = self.env(y_ini[:,-self.controller.p:], action)
 
                 G = torch.cat((G, g.unsqueeze(1)), axis=1)
                 U = torch.cat((U, action.unsqueeze(1)), axis=1)
@@ -80,4 +92,4 @@ class Trainer:
         for name, param in self.controller.named_parameters():
             print(f'Name : {name}, Value : {param.data}')
 
-        return [param for param in self.controller.parameters()]
+        return {k: param for k, param in self.controller.named_parameters()}
