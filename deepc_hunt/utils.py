@@ -27,7 +27,7 @@ def episode_loss(Y : torch.Tensor, U : torch.Tensor, G : torch.Tensor, controlle
             Ct += (Y[i,j,:].T @ Q @ Y[i,j,:] + U[i,j,:].T @ R @ U[i,j,:]).reshape(1)
             if not controller.linear:
                 Cr += torch.norm((PI)@G[i,j,:], p=2)**2
-                Cr += torch.norm((PI)@G[i,j,:], p=1)
+                Cr += torch.norm(G[i,j,:], p=1)
             if Ey is not None:
                 Cr += torch.norm(Ey[i,j,:], p=1) 
             if Eu is not None:
