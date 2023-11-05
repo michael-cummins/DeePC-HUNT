@@ -37,7 +37,7 @@ def episode_loss(Y : torch.Tensor, U : torch.Tensor, G : torch.Tensor, controlle
     return loss
 
 def sample_initial_signal(Tini : int, p : int, m : int, batch : int, ud : np.array, yd : np.array) -> torch.Tensor:
-   
+    
     """
     Samples initial signal trajectory from system data
     args:
@@ -65,7 +65,7 @@ def sample_initial_signal(Tini : int, p : int, m : int, batch : int, ud : np.arr
     u_ini, y_ini = torch.Tensor(sampled_uini), torch.Tensor(sampled_yini)
     return u_ini, y_ini
 
-def block_hankel(w: np.array, L: int, d: int) -> np.array:
+def block_hankel(w: np.ndarray, L: int, d: int) -> np.ndarray:
     """
     Builds block Hankel matrix for column vector w of order L
     args:
@@ -92,7 +92,7 @@ def block_hankel_torch(w: torch.Tensor, L: int, d: int) -> torch.Tensor:
 
 class Projection(object):
 
-    def __init__(self, frequency=1, lower=1e-4, upper=1e4):
+    def __init__(self, frequency=1, lower=1e-5, upper=1e5):
         self.frequency = frequency
         self.lower = lower 
         self.upper = upper

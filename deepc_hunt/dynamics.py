@@ -20,23 +20,22 @@ class RocketDx(nn.Module):
         if squeeze:
             x_init = x_init.unsqueeze(0)
         # Params from the COCO rocket lander env
-        self.Ts : float = 1/60
-        self.g = 9.81
         self.lander_scaling : float = 4 
         self.scale : int = 30
-        self.mass = 30000 # kg
-        # self.main_engine_thrust = (6.8e6*(self.lander_scaling**3))/(self.scale**3)
-        # self.side_engine_thrust = (6.8e6*(self.lander_scaling**3)/50)/(self.scale**3)
-        # self.nozzle_torque: float = 500 * self.lander_scaling
-        self.main_engine_thrust = 6.8e6
-        self.side_engine_thrust = 6.8e6/50
-        self.nozzle_torque = 500
-        self.max_nozzle_angle: float = 15 * np.pi / 180
-        self.l1 : float = 42.7/2
-        self.l2 : float = 42.7/2
-        self.ln :float = 42.7/32
-        self.x = x_init
-        print(f'F_e = {self.main_engine_thrust}, F_s = {self.side_engine_thrust}, Nozzle Torque : {self.nozzle_torque}')
+        self.const: float = (self.lander_scaling**3)/(self.scale**3)
+        self.nozzle_torque = 500*self.lander_scaling
+        self.nozzle_inertia = 0.21696986258029938
+
+        self.Ts : float = 1/60
+        self.g = 9.81
+        self.mass = 530.4058532714844 # kg
+        self.main_engine_thrust = 16118.518518518518
+        self.side_engine_thrust = 322.3703703703704
+        self.inertia = 1209.53515625
+        self.max_nozzle_angle: float = 0.2617993877991494
+        self.l1 : float = 2.8466666666666667
+        self.l2 : float = 2.1350000000000002
+        self.ln : float = 0
 
     def forward(self, x: torch.Tensor, u: torch.Tensor) -> torch.Tensor:
 
@@ -48,35 +47,39 @@ class RocketDx(nn.Module):
         if squeeze_u:
             u = u.unsqueeze(0)
         
-        # print(self.x)
         # Rescale inputs
-        u[:,0] = torch.clamp(u[:,0], min=0, max=1)*self.main_engine_thrust
-        u[:,1] = torch.clamp(u[:,1], min=-1, max=1)*self.side_engine_thrust
-        u[:,2] = torch.clamp(u[:,2], min=-self.max_nozzle_angle, max=self.max_nozzle_angle)
-        # print(u)
-        
-        z = x
+        F_e = torch.clamp(u[:,0], min=0, max=1)*self.main_engine_thrust
+        F_s = torch.clamp(u[:,1], min=-1, max=1)*self.side_engine_thrust
+        phi = torch.clamp(u[:,2], min=-1, max=1)*self.max_nozzle_angle
+        sin_phi = torch.sin(phi)
+
+        # Symplectic Euler
+
+        # Theta dot
+        x[:,5] = x[:,5] + self.Ts*(-F_e*sin_phi*self.l1 - self.l2*F_s)/self.inertia
+        # x dot
+        x[:,2] = x[:,2] + self.Ts*(-F_e*torch.sin(x[:,4] + phi) + F_s*torch.cos(x[:,4]))/self.mass
+        # y dot
+        x[:,3] = x[:,3] + self.Ts*(F_e*torch.cos(x[:,4] + phi) + F_s*torch.sin(x[:,4]) - self.mass*self.g)/self.mass
+
         # Roll sim forward
-        z[:,0] = x[:,0] + self.Ts*x[:,2] # X
-        z[:,1] = x[:,1] + self.Ts*x[:,3] # Y
-        z[:,4] = x[:,4] + self.Ts*x[:,5] # Theta
-        z[:,2] = x[:,2] + self.Ts*(u[:,0]*(x[:,4] + u[:,2]) + u[:,1])/self.mass
-        z[:,3] = x[:,3] + self.Ts*(u[:,0]*(1 - u[:,2]*x[:,4]) - u[:,1]*x[:,4] - self.mass*self.g)/self.mass
-        z[:,5] = x[:,5] + self.Ts*(-u[:,0]*u[:,2]*(self.l1 + self.ln) + self.l2*u[:,1])/self.nozzle_torque
-        return z
+        x[:,0] = x[:,0] + self.Ts*x[:,2] # X
+        x[:,1] = x[:,1] + self.Ts*x[:,3] # Y
+        x[:,4] = x[:,4] + self.Ts*x[:,5] # Theta
+
+        return x, [F_e, F_s, phi]
 
 class Env(nn.Module):
 
     def __init__(self, f, discrete=False, Ts=None):
-        if Ts is not None and discrete==True:
+        if Ts is not None and discrete is True:
             raise AssertionError('If not discrete, then you must supply a sample time Ts')
-        if discrete and Ts:
+        if discrete is True and Ts is not None:
             raise AssertionError('Discrete does not require a sample time -> Ts=None')
 
         self.Ts = Ts
         self.discrete = discrete
         self.f = f
-        
     
     def f(x : torch.Tensor, u : torch.Tensor) -> torch.Tensor:
         return x
@@ -101,7 +104,6 @@ class Env(nn.Module):
             z = z.squeeze(0)
         
         return z
-
 class dynamics(Env):
     def __init__(self, discrete=False, Ts=None):
         super().__init__()
