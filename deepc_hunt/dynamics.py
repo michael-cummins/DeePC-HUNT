@@ -16,9 +16,11 @@ class RocketDx(nn.Module):
 
     def __init__(self, x_init : torch.Tensor):
         super().__init__()
+        
         squeeze = x_init.ndimension() == 1
         if squeeze:
             x_init = x_init.unsqueeze(0)
+        
         # Params from the COCO rocket lander env
         self.lander_scaling : float = 4 
         self.scale : int = 30
