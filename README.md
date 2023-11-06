@@ -12,7 +12,7 @@ Install via pip
 ```
 pip install deepc_hunt
 ```
-Or clone the repo and install via
+Or clone the repo and install from source [Recommended]
 ```
 cd DeePC-HUNT && pip install -e .
 ```
@@ -39,20 +39,22 @@ $$\begin{pmatrix} 1 & 2 & 3 \end{pmatrix}$$
     
 $$u \in \mathcal{U}, y \in \mathcal{Y}$$ -->
 
-DeePC can achieve performance that rivals MPC on non-linear and stochastic systems ([see here](https://arxiv.org/abs/2101.01273)) but is highly sensitive to the choice of regularization parameters $\theta_i$. DeePC-HUNT addresses this problem by automatically tuning these parameters. The performance of DeePC-HUNT has been validated on a noisy [cartpole](https://github.com/michael-cummins/DeePC-HUNT/ddeepc/cartpole_ddeepc.ipynb) and [LTI](https://github.com/michael-cummins/DeePC-HUNT/ddeepc/linear_ddeepc.ipynb) system. To run these example notebooks, you can clone this directory and open it in a VS-Code environment with the Jupyter Notebook extension
+DeePC can achieve performance that rivals MPC on non-linear and stochastic systems ([see here](https://arxiv.org/abs/2101.01273)) but is highly sensitive to the choice of regularization parameters $\theta_i$. DeePC-HUNT addresses this problem by automatically tuning these parameters. The performance of DeePC-HUNT has been validated on a [rocket lander](https://github.com/michael-cummins/DeePC-HUNT/examples/rocket.ipynb) modelling the falcon 9, a noisy [cartpole](https://github.com/michael-cummins/DeePC-HUNT/examples/cartpole_ddeepc.ipynb) and a [LTI](https://github.com/michael-cummins/DeePC-HUNT/examples/linear_deepc.ipynb) system. To run these example notebooks, you can clone this directory and open it in a VS-Code environment with the Jupyter Notebook extension
 
-### Cartpole - before training
+### Rocket - before training
 
-DeePC controller initialised, with $\theta = (200,200,200,200)$, controlling the horizontal force applied to the cartpole system with a regulation objective.
+https://github.com/michael-cummins/DeePC-HUNT/assets/72135336/eacd384e-b69d-428e-aa3e-1b4e669a3485
 
-https://github.com/michael-cummins/DeePC-HUNT/assets/72135336/1c73ca21-91c1-4669-a04d-1d9a103d9d48
 
 
 
 ### Cartpole - after training (episode 70)
 
-After running DeePC-HUNT for 70 episodes, $\theta$ converges to $(200.7, 0.87, 418.8, 200.1)$ and the controller now stabilizes the system.
+After running DeePC-HUNT for 70 episodes, the controller now stabilizes the system.
 
 
-https://github.com/michael-cummins/DeePC-HUNT/assets/72135336/b6fa9948-a768-4646-b87f-018395fcc6c4
+
+
+https://github.com/michael-cummins/DeePC-HUNT/assets/72135336/b88aedf8-b816-4a89-a9ef-3bfa9b9c9d0b
+
 
