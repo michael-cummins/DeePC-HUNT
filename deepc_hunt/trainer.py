@@ -35,6 +35,8 @@ class Trainer:
             )
             u_ini = u_ini.to(self.controller.device)
             y_ini = y_ini.to(self.controller.device)
+            u_ini = 0*u_ini
+            u_ini[:,::3] = 0.3228
             uT, yT = u_ini, y_ini
 
             # Each sim should try stabilize around where it spawned in

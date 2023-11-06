@@ -80,23 +80,23 @@ class DeePC(nn.Module):
 
         if stochastic_y:
             if isinstance(lam_y, torch.Tensor):
-                self.lam_y = lam_y 
+                self.lam_y = lam_y.to(self.device)
             else:
                 self.lam_y = Parameter(torch.randn((1,))*0.001 + 200)
        
         if stochastic_u:
             if isinstance(lam_u, torch.Tensor):
-                self.lam_u = lam_u 
+                self.lam_u = lam_u.to(self.device)
             else:
                 self.lam_u = Parameter(torch.randn((1,))*0.01 + 200)
 
         if not linear:
             if isinstance(lam_g1, torch.Tensor):
-                self.lam_g1 = lam_g1
+                self.lam_g1 = lam_g1.to(self.device)
             else:
                 self.lam_g1 = Parameter(torch.randn((1,))*0.0001 + 200)
             if isinstance(lam_g2, torch.Tensor):
-                self.lam_g2 = lam_g2
+                self.lam_g2 = lam_g2.to(self.device)
             else:
                 self.lam_g2 = Parameter(torch.randn((1,))*0.001 + 200)
 
