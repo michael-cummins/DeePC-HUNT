@@ -48,7 +48,7 @@ https://github.com/michael-cummins/DeePC-HUNT/assets/72135336/eacd384e-b69d-428e
 
 
 
-### Cartpole - after training (episode 70)
+### Rocket - after training (episode 70)
 
 After running DeePC-HUNT for 70 episodes, the controller now stabilizes the system.
 
