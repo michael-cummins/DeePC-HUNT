@@ -52,7 +52,6 @@ class RocketDx(nn.Module):
         sin_phi = torch.sin(phi)
 
         z = x.clone()
-        # Symplectic Euler
 
         # Theta dot
         z[:,5] = x[:,5] + self.Ts*(-F_e*sin_phi*self.l1 - self.l2*F_s)/self.inertia
