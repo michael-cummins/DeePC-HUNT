@@ -5,7 +5,8 @@ from torch.nn import Parameter
 import numpy as np
 from deepc_hunt.utils import tensor2np
 import matplotlib.pyplot as plt
-
+from typing import Tuple
+import scipy
 class RocketDx(nn.Module):
 
     """
@@ -34,6 +35,9 @@ class RocketDx(nn.Module):
         self.l1 : float = 2.8466666666666667
         self.l2 : float = 2.1350000000000002
         self.ln : float = 0
+
+        self.state_shape = 6
+        self.action_shape = 3
 
     def forward(self, x: torch.Tensor, u: torch.Tensor) -> torch.Tensor:
 
@@ -67,6 +71,66 @@ class RocketDx(nn.Module):
 
         return z
 
+    def linearise(self, x_eq: np.ndarray, u_eq: np.ndarray, discrete: bool) -> Tuple[np.ndarray]:
+        # linearized state dynamics
+        a24 = (
+            -u_eq[1] * np.sin(x_eq[4]) - u_eq[0] * np.cos(x_eq[4] + u_eq[2])
+        ) / self.mass
+        a34 = (
+            +u_eq[1] * np.cos(x_eq[4]) - u_eq[0] * np.sin(x_eq[4] + u_eq[2])
+        ) / self.mass
+
+        # linearized input dynamics
+        b20 = -np.sin(x_eq[4] + u_eq[2]) / self.mass
+        b21 = np.cos(x_eq[4]) / self.mass
+        b22 = -u_eq[0] * np.cos(x_eq[4] + u_eq[2]) / self.mass
+
+        b30 = np.cos(x_eq[4] + u_eq[2]) / self.mass
+        b31 = np.sin(x_eq[4]) / self.mass
+        b32 = -u_eq[0] * np.sin(x_eq[4] + u_eq[2]) / self.mass
+
+        b50 = -self.l1 * np.sin(u_eq[2]) / self.inertia
+        b51 = -self.l2 / self.inertia
+        b52 = -self.l1 * u_eq[0] * np.cos(u_eq[2]) / self.inertia
+
+        # A matrix
+        A = np.zeros((self.state_shape, self.state_shape))
+        A[0, 2] = 1
+        A[1, 3] = 1
+        A[2, 4] = a24
+        A[3, 4] = a34
+        A[4, 5] = 1
+
+        # B matrix
+        B = np.zeros((self.state_shape, self.action_shape))
+        B[2, 0] = b20
+        B[2, 1] = b21
+        B[2, 2] = b22
+
+        B[3, 0] = b30
+        B[3, 1] = b31
+        B[3, 2] = b32
+
+        B[5, 0] = b50
+        B[5, 1] = b51
+        B[5, 2] = b52
+
+        # we normalize the applied actions within the allowable input range
+        normalization_u = np.diag([self.main_engine_thrust, self.side_engine_thrust, self.max_nozzle_angle])
+
+        B = B @ normalization_u
+        
+        if discrete:
+            # integrate matrix exponential, multiply with B
+            Ad_int, _ = scipy.integrate.quad_vec(
+                lambda tau: scipy.linalg.expm(A * tau), 0, self.Ts
+            )
+            B = Ad_int @ B
+
+            # exact discretization using matrix exponential
+            A = scipy.linalg.expm(A * self.Ts)
+
+        return A, B
 class Env(nn.Module):
 
     def __init__(self, f, discrete=False, Ts=None):

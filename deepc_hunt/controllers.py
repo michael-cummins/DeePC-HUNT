@@ -251,7 +251,7 @@ class npDeePC:
     Vanilla regularized DeePC module
     """
 
-    def __init__(self, ud: np.array, yd: np.array, y_constraints: np.array, u_constraints: np.array, 
+    def __init__(self, ud: np.ndarray, yd: np.ndarray, y_constraints: np.ndarray, u_constraints: np.ndarray, 
                  N: int, Tini: int, n: int, p: int, m: int) -> None:
        
         """
@@ -347,7 +347,7 @@ class npDeePC:
                 self.Yf@self.g == self.y,
                 cp.abs(self.u) <= self.u_constraints,
                 cp.abs(self.y) <= self.y_constraints,
-                self.u[::3] >= 0
+                self.u[::3] >= 0 # only for rocket
                 # self.y[-self.p:] == ref[-self.p:]
             ]
 
@@ -374,6 +374,56 @@ class npDeePC:
         # assert prob.is_dcp()
         self.ref.value = ref
         self.u_ini.value = u_ini
+        self.y_ini.value = y_ini
+        self.problem.solve(solver=solver, verbose=verbose)
+        action = self.problem.variables()[1].value[:self.m]
+        obs = self.problem.variables()[0].value # For imitation loss
+        return action, obs
+    
+class npMPC:
+
+    def __init__(self, A: np.ndarray, B: np.ndarray, Q: np.ndarray, R: np.ndarray, 
+                 N: int, u_constraints: np.ndarray, y_constraints: np.ndarray) -> None:
+        
+        self.N = N
+        self.p = B.shape[0] 
+        self.N = N
+        self.m = B.shape[1]
+        self.y_constraints = y_constraints
+        self.u_constraints = u_constraints
+        self.A = A
+        self.B = B
+        self.Q = Q
+        self.R = R
+
+        # Initialise Optimisation variables and parameters
+        self.u = cp.Variable(self.N*self.m)
+        self.y = cp.Variable(self.N*self.p)
+        self.ref = cp.Parameter((self.N*self.p,))
+        self.y_ini = cp.Parameter(self.p)
+
+    def setup(self):
+
+        self.Q = np.kron(np.eye(self.N), self.Q)
+        self.R = np.kron(np.eye(self.N), self.R)
+        self.cost = cp.quad_form(self.y-self.ref, cp.psd_wrap(self.Q)) + cp.quad_form(self.u, cp.psd_wrap(self.R))
+
+        self.constraints = [
+            self.y[:self.p] == self.y_ini,
+            cp.abs(self.u) <= self.u_constraints,
+            cp.abs(self.y) <= self.y_constraints,
+            self.u[::3] >= 0 # only for rocket
+        ]
+
+        for i in range(1,self.N):
+            self.constraints.append(
+                self.y[self.p*i:self.p*(i+1)] == self.A@self.y[self.p*(i-1):self.p*i] + self.B@self.u[self.m*(i-1):self.m*i]
+            )
+
+        self.problem = cp.Problem(cp.Minimize(self.cost), self.constraints)
+    
+    def solve(self, ref, y_ini, verbose=False, solver=cp.MOSEK) -> np.ndarray:
+        self.ref.value = ref
         self.y_ini.value = y_ini
         self.problem.solve(solver=solver, verbose=verbose)
         action = self.problem.variables()[1].value[:self.m]
