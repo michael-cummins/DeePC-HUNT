@@ -1,0 +1,188 @@
+000 (14759452.000.000) 2024-02-19 11:28:45 Job submitted from host: <10.15.2.1:9618?PrivAddr=%3c172.22.0.101:9618%3fsock%3dschedd_41397_7a2b%3e&PrivNet=internal.cluster.is.localnet&addrs=10.15.2.1-9618&alias=sched.cluster.is.localnet&noUDP&sock=schedd_41397_7a2b>
+...
+001 (14759452.000.000) 2024-02-19 11:29:24 Job executing on host: <172.22.2.89:9618?addrs=172.22.2.89-9618&alias=g089.internal.cluster.is.localnet&noUDP&sock=startd_3313_055a>
+...
+006 (14759452.000.000) 2024-02-19 11:29:32 Image size of job updated: 2933504
+	155  -  MemoryUsage of job (MB)
+	158372  -  ResidentSetSize of job (KB)
+...
+006 (14759452.000.000) 2024-02-19 11:34:32 Image size of job updated: 11913092
+	8601  -  MemoryUsage of job (MB)
+	8806700  -  ResidentSetSize of job (KB)
+...
+006 (14759452.000.000) 2024-02-19 11:39:32 Image size of job updated: 11913092
+	8601  -  MemoryUsage of job (MB)
+	8806868  -  ResidentSetSize of job (KB)
+...
+006 (14759452.000.000) 2024-02-19 11:41:49 Image size of job updated: 11914144
+	8601  -  MemoryUsage of job (MB)
+	8806868  -  ResidentSetSize of job (KB)
+...
+004 (14759452.000.000) 2024-02-19 11:41:49 Job was evicted.
+	(0) CPU times
+		Usr 0 00:11:51, Sys 0 00:00:21  -  Run Remote Usage
+		Usr 0 00:00:00, Sys 0 00:00:00  -  Run Local Usage
+	0  -  Run Bytes Sent By Job
+	0  -  Run Bytes Received By Job
+	Partitionable Resources :    Usage  Request Allocated 
+	   Cpus                 :     1.00        1         1 
+	   Disk (KB)            :  7500        7500   1651175 
+	   Gpus (Average)       :                 0         0 
+	   Memory (MB)          :  8601      128096    128128 
+...
+009 (14759452.000.000) 2024-02-19 11:41:49 Job was aborted.
+	via condor_rm (by user mcummins)
+...
+000 (14759457.000.000) 2024-02-19 11:42:20 Job submitted from host: <10.15.2.1:9618?PrivAddr=%3c172.22.0.101:9618%3fsock%3dschedd_41397_7a2b%3e&PrivNet=internal.cluster.is.localnet&addrs=10.15.2.1-9618&alias=sched.cluster.is.localnet&noUDP&sock=schedd_41397_7a2b>
+...
+001 (14759457.000.000) 2024-02-19 11:42:24 Job executing on host: <172.22.2.89:9618?addrs=172.22.2.89-9618&alias=g089.internal.cluster.is.localnet&noUDP&sock=startd_3313_055a>
+...
+006 (14759457.000.000) 2024-02-19 11:42:32 Image size of job updated: 280504
+	274  -  MemoryUsage of job (MB)
+	280504  -  ResidentSetSize of job (KB)
+...
+006 (14759457.000.000) 2024-02-19 11:47:32 Image size of job updated: 17628012
+	14752  -  MemoryUsage of job (MB)
+	15106028  -  ResidentSetSize of job (KB)
+...
+006 (14759457.000.000) 2024-02-19 11:52:33 Image size of job updated: 28867600
+	25158  -  MemoryUsage of job (MB)
+	25761620  -  ResidentSetSize of job (KB)
+...
+006 (14759457.000.000) 2024-02-19 11:57:34 Image size of job updated: 28868624
+	25159  -  MemoryUsage of job (MB)
+	25762040  -  ResidentSetSize of job (KB)
+...
+006 (14759457.000.000) 2024-02-19 12:07:35 Image size of job updated: 28869676
+	25160  -  MemoryUsage of job (MB)
+	25763656  -  ResidentSetSize of job (KB)
+...
+006 (14759457.000.000) 2024-02-19 12:22:37 Image size of job updated: 28875468
+	25166  -  MemoryUsage of job (MB)
+	25769556  -  ResidentSetSize of job (KB)
+...
+006 (14759457.000.000) 2024-02-19 12:27:37 Image size of job updated: 28915460
+	25204  -  MemoryUsage of job (MB)
+	25808620  -  ResidentSetSize of job (KB)
+...
+006 (14759457.000.000) 2024-02-19 12:32:38 Image size of job updated: 28950216
+	25239  -  MemoryUsage of job (MB)
+	25843844  -  ResidentSetSize of job (KB)
+...
+006 (14759457.000.000) 2024-02-19 12:35:35 Image size of job updated: 28980232
+	25239  -  MemoryUsage of job (MB)
+	25843844  -  ResidentSetSize of job (KB)
+...
+004 (14759457.000.000) 2024-02-19 12:35:35 Job was evicted.
+	(0) CPU times
+		Usr 0 00:51:55, Sys 0 00:01:10  -  Run Remote Usage
+		Usr 0 00:00:00, Sys 0 00:00:00  -  Run Local Usage
+	0  -  Run Bytes Sent By Job
+	0  -  Run Bytes Received By Job
+	Partitionable Resources :    Usage  Request Allocated 
+	   Cpus                 :     1.00        1         1 
+	   Disk (KB)            :  7500        7500   1651175 
+	   Gpus (Average)       :                 0         0 
+	   Memory (MB)          : 25239      128096    128128 
+...
+009 (14759457.000.000) 2024-02-19 12:35:35 Job was aborted.
+	via condor_rm (by user mcummins)
+...
+000 (14759484.000.000) 2024-02-19 12:57:37 Job submitted from host: <10.15.2.1:9618?PrivAddr=%3c172.22.0.101:9618%3fsock%3dschedd_41397_7a2b%3e&PrivNet=internal.cluster.is.localnet&addrs=10.15.2.1-9618&alias=sched.cluster.is.localnet&noUDP&sock=schedd_41397_7a2b>
+...
+001 (14759484.000.000) 2024-02-19 13:00:39 Job executing on host: <172.22.2.97:9618?addrs=172.22.2.97-9618&alias=g097.internal.cluster.is.localnet&noUDP&sock=startd_5551_1a4e>
+...
+006 (14759484.000.000) 2024-02-19 13:00:49 Image size of job updated: 2927420
+	146  -  MemoryUsage of job (MB)
+	149272  -  ResidentSetSize of job (KB)
+...
+006 (14759484.000.000) 2024-02-19 13:05:48 Image size of job updated: 14048824
+	10687  -  MemoryUsage of job (MB)
+	10942904  -  ResidentSetSize of job (KB)
+...
+006 (14759484.000.000) 2024-02-19 13:10:48 Image size of job updated: 14076704
+	10714  -  MemoryUsage of job (MB)
+	10970804  -  ResidentSetSize of job (KB)
+...
+006 (14759484.000.000) 2024-02-19 13:15:48 Image size of job updated: 14128280
+	10764  -  MemoryUsage of job (MB)
+	11022020  -  ResidentSetSize of job (KB)
+...
+006 (14759484.000.000) 2024-02-19 13:20:48 Image size of job updated: 14191472
+	10826  -  MemoryUsage of job (MB)
+	11085212  -  ResidentSetSize of job (KB)
+...
+006 (14759484.000.000) 2024-02-19 13:25:48 Image size of job updated: 14209904
+	10844  -  MemoryUsage of job (MB)
+	11103704  -  ResidentSetSize of job (KB)
+...
+006 (14759484.000.000) 2024-02-19 13:30:49 Image size of job updated: 14226724
+	10860  -  MemoryUsage of job (MB)
+	11120540  -  ResidentSetSize of job (KB)
+...
+006 (14759484.000.000) 2024-02-19 13:35:50 Image size of job updated: 14250392
+	10883  -  MemoryUsage of job (MB)
+	11144072  -  ResidentSetSize of job (KB)
+...
+006 (14759484.000.000) 2024-02-19 13:40:50 Image size of job updated: 14258820
+	10892  -  MemoryUsage of job (MB)
+	11152512  -  ResidentSetSize of job (KB)
+...
+006 (14759484.000.000) 2024-02-19 13:50:50 Image size of job updated: 14272284
+	10905  -  MemoryUsage of job (MB)
+	11165988  -  ResidentSetSize of job (KB)
+...
+006 (14759484.000.000) 2024-02-19 13:55:50 Image size of job updated: 14278076
+	10910  -  MemoryUsage of job (MB)
+	11171788  -  ResidentSetSize of job (KB)
+...
+006 (14759484.000.000) 2024-02-19 14:00:51 Image size of job updated: 14288608
+	10921  -  MemoryUsage of job (MB)
+	11182336  -  ResidentSetSize of job (KB)
+...
+006 (14759484.000.000) 2024-02-19 14:05:52 Image size of job updated: 14289660
+	10922  -  MemoryUsage of job (MB)
+	11183388  -  ResidentSetSize of job (KB)
+...
+006 (14759484.000.000) 2024-02-19 14:10:52 Image size of job updated: 14298116
+	10930  -  MemoryUsage of job (MB)
+	11191844  -  ResidentSetSize of job (KB)
+...
+006 (14759484.000.000) 2024-02-19 14:20:54 Image size of job updated: 14321288
+	10953  -  MemoryUsage of job (MB)
+	11215016  -  ResidentSetSize of job (KB)
+...
+006 (14759484.000.000) 2024-02-19 14:35:57 Image size of job updated: 14325532
+	10957  -  MemoryUsage of job (MB)
+	11219260  -  ResidentSetSize of job (KB)
+...
+006 (14759484.000.000) 2024-02-19 14:40:58 Image size of job updated: 14348176
+	10979  -  MemoryUsage of job (MB)
+	11241908  -  ResidentSetSize of job (KB)
+...
+006 (14759484.000.000) 2024-02-19 14:45:59 Image size of job updated: 14362920
+	10993  -  MemoryUsage of job (MB)
+	11256652  -  ResidentSetSize of job (KB)
+...
+006 (14759484.000.000) 2024-02-19 14:50:25 Image size of job updated: 14380296
+	10993  -  MemoryUsage of job (MB)
+	11256652  -  ResidentSetSize of job (KB)
+...
+005 (14759484.000.000) 2024-02-19 14:50:26 Job terminated.
+	(1) Normal termination (return value 0)
+		Usr 0 01:47:55, Sys 0 00:01:28  -  Run Remote Usage
+		Usr 0 00:00:00, Sys 0 00:00:00  -  Run Local Usage
+		Usr 0 01:47:55, Sys 0 00:01:28  -  Total Remote Usage
+		Usr 0 00:00:00, Sys 0 00:00:00  -  Total Local Usage
+	0  -  Run Bytes Sent By Job
+	0  -  Run Bytes Received By Job
+	0  -  Total Bytes Sent By Job
+	0  -  Total Bytes Received By Job
+	Partitionable Resources :    Usage  Request Allocated 
+	   Cpus                 :     1.00        1         1 
+	   Disk (KB)            :  7500        7500   1728736 
+	   Gpus (Average)       :                 0         0 
+	   Memory (MB)          : 10993      128096    128128 
+
+	Job terminated of its own accord at 2024-02-19T13:50:25Z with exit-code 0.
+...

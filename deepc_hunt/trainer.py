@@ -14,14 +14,12 @@ class Trainer:
 
     def run(self, epochs, time_steps):
 
-        torch.autograd.set_detect_anomaly(True)
-
+        # torch.autograd.set_detect_anomaly(True)
         pbar = tqdm(range(epochs), ncols=100)
         
         # uref specific for rocket - want it to hover in one place
         uref = torch.zeros((self.controller.n_batch, self.controller.m*self.controller.N))
         uref[:,::3] = 0.3228
-
 
         for _ in pbar:
             
@@ -35,13 +33,20 @@ class Trainer:
             )
             u_ini = u_ini.to(self.controller.device)
             y_ini = y_ini.to(self.controller.device)
-            u_ini = 0*u_ini
-            u_ini[:,::3] = 0.3228
+            # y_ini[:,2] = 0
+            # y_ini[:,3] = 0
+            # y_ini[:,5] = 0
+            # u_ini = 0*u_ini
+            # u_ini[:,::3] = 0.3228
             uT, yT = u_ini, y_ini
 
             # Each sim should try stabilize around where it spawned in
-            yref = y_ini[:,-self.controller.p:]
-            yref = yref.repeat(1, self.controller.N)
+            yref = y_ini[0,-self.controller.p:]
+            yref[2:] = 0
+            yref = yref.repeat(self.controller.n_batch, self.controller.N)
+            # print(yref.shape)
+            # yref = torch.Tensor([0,0,0,0,0,0]).repeat(self.controller.n_batch, self.controller.N)
+            # yref = yref.to(self.controller.device)
 
             I, PI = self.controller.get_PI()
 
@@ -55,7 +60,8 @@ class Trainer:
             for _ in range(time_steps):
                 
                 # Solve for input
-                decision_vars = self.controller(ref=yref.to(self.controller.device), uref=uref.to(self.controller.device), u_ini=u_ini, y_ini=y_ini)
+                # decision_vars = self.controller(ref=yref, uref=uref.to(self.controller.device), u_ini=u_ini, y_ini=y_ini)
+                decision_vars = self.controller(uref=None, ref=None, u_ini=u_ini, y_ini=y_ini)
                 [g, u_pred] = decision_vars[:2]
                 
                 sig_y = decision_vars[3] if Ey is not None else None
@@ -65,7 +71,11 @@ class Trainer:
                 action = u_pred[:,:self.controller.m] 
                 obs = self.env(y_ini[:,-self.controller.p:], action)
 
+                real_y = yref[:,:self.controller.p].unsqueeze(1)
+                real_u = uref[:,:self.controller.m].unsqueeze(1)
                 G = torch.cat((G, g.unsqueeze(1)), axis=1)
+                # U = torch.cat((U, action.unsqueeze(1) - real_u.to(self.controller.device)), axis=1)
+                # Y = torch.cat((Y, obs.unsqueeze(1) - real_y.to(self.controller.device)), axis=1)
                 U = torch.cat((U, action.unsqueeze(1)), axis=1)
                 Y = torch.cat((Y, obs.unsqueeze(1)), axis=1)
                 

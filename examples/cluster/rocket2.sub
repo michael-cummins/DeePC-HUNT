@@ -1,0 +1,9 @@
+executable = /usr/bin/python3
+arguments = rocket.py
+error = rocket2.err
+output = rocket2.out
+log = rocket2.log
+request_cpus=1
+request_gpus=0
+request_memory=128096
+queue

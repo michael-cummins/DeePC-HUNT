@@ -156,10 +156,8 @@ class DeePC(nn.Module):
             self.u[::3] >= 0 # Just for rocket
             # self.y[-self.p:] == ref[-self.p:]
         ]
-        print(f'length of constraints before noise : {len(constraints)}')
         constraints.append(self.Up@g == u_ini + sig_u) if self.stochastic_u else constraints.append(self.Up@g == u_ini)
         constraints.append(self.Yp@g == y_ini + sig_y) if self.stochastic_y else constraints.append(self.Yp@g == y_ini)
-        print(f'length of constraints after noise : {len(constraints)}')
         # Initialise optimization problem
         problem = cp.Problem(cp.Minimize(cost), constraints)
         assert problem.is_dcp()
@@ -211,12 +209,15 @@ class DeePC(nn.Module):
         
         # Add paramters and system
         if not self.linear:
-            params.append(self.lam_g1)
-            params.append(self.lam_g2.repeat(self.n_batch,1))
+            params.append(self.lam_g1.to(self.device))
+            params.append(self.lam_g2.repeat(self.n_batch,1).to(self.device))
         if self.stochastic_y:
-            params.append(self.lam_y.repeat(self.n_batch,1))
+            params.append(self.lam_y.repeat(self.n_batch,1).to(self.device))
         if self.stochastic_u:
             params.append(self.lam_u.repeat(self.n_batch,1))
+        
+        for param in params:
+            param.to(self.device)
 
         out = self.QP_layer(*params, solver_args={"solve_method": "ECOS"})
         g, input, output = out[0], out[2], out[3]
@@ -359,7 +360,7 @@ class npDeePC:
 
         self.problem = cp.Problem(cp.Minimize(self.cost), self.constraints)
 
-    def solve(self, ref, u_ini, y_ini, verbose=False, solver=cp.MOSEK) -> np.ndarray:
+    def solve(self, ref, u_ini, y_ini, verbose=False, solver=cp.OSQP) -> np.ndarray:
         
         """
         Call once the controller is set up with relevenat parameters.
