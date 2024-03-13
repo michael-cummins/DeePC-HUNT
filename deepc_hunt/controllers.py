@@ -6,6 +6,7 @@ from cvxpylayers.torch import CvxpyLayer
 import numpy as np
 import cvxpy as cp
 import time
+from typing import Tuple
 
 class DeePC(nn.Module):
 
@@ -55,8 +56,10 @@ class DeePC(nn.Module):
         self.N = N
         self.p = p
         self.m = m
-        self.y_constraints = y_constraints
-        self.u_constraints = u_constraints
+        self.y_lower = y_constraints[0]
+        self.y_upper = y_constraints[1]
+        self.u_lower= u_constraints[0]
+        self.u_upper = u_constraints[1]
         self.stochastic_y = stochastic_y
         self.stochastic_u = stochastic_u
         self.device = device # TODO: Shouldn't have to do this
@@ -151,9 +154,9 @@ class DeePC(nn.Module):
             e == self.y - ref,  # necessary for paramaterized programming
             self.Uf@g == self.u,
             self.Yf@g == self.y,
-            cp.abs(self.u) <= self.u_constraints,
-            cp.abs(self.y) <= self.y_constraints,
-            self.u[::3] >= 0 # Just for rocket
+            self.u <= self.u_upper, self.u >= self.u_lower,
+            self.y <= self.y_upper, self.y >= self.y_lower
+            # self.u[::3] >= 0 # Just for rocket
             # self.y[-self.p:] == ref[-self.p:]
         ]
         print(f'length of constraints before noise : {len(constraints)}')
@@ -251,7 +254,7 @@ class npDeePC:
     Vanilla regularized DeePC module
     """
 
-    def __init__(self, ud: np.ndarray, yd: np.ndarray, y_constraints: np.ndarray, u_constraints: np.ndarray, 
+    def __init__(self, ud: np.ndarray, yd: np.ndarray, y_constraints: Tuple[np.ndarray], u_constraints: Tuple[np.ndarray], 
                  N: int, Tini: int, n: int, p: int, m: int) -> None:
        
         """
@@ -271,8 +274,10 @@ class npDeePC:
         self.N = N
         self.p = p
         self.m = m
-        self.y_constraints = y_constraints
-        self.u_constraints = u_constraints
+        self.y_lower = y_constraints[0]
+        self.y_upper = y_constraints[1]
+        self.u_lower= u_constraints[0]
+        self.u_upper = u_constraints[1]
 
         # Check for full row rank
         H = block_hankel(w=ud.reshape((m*self.T,)), L=Tini+N+n, d=m)
@@ -294,7 +299,8 @@ class npDeePC:
         self.y = cp.Variable(self.N*self.p)
         self.sig_y = cp.Variable(self.Tini*self.p)
 
-        self.ref = cp.Parameter((self.N*self.p,))
+        self.y_ref = cp.Parameter((self.N*self.p,))
+        self.u_ref = cp.Parameter((self.N*self.m,))
         self.u_ini = cp.Parameter(self.Tini*self.m)
         self.y_ini = cp.Parameter(self.Tini*self.p)
 
@@ -324,7 +330,7 @@ class npDeePC:
         self.Q = np.kron(np.eye(self.N), Q)
         self.R = np.kron(np.eye(self.N), R)
         
-        self.cost = cp.quad_form(self.y-self.ref, cp.psd_wrap(self.Q)) + cp.quad_form(self.u, cp.psd_wrap(self.R))
+        self.cost = cp.quad_form(self.y-self.y_ref, cp.psd_wrap(self.Q)) + cp.quad_form(self.u-self.u_ref, cp.psd_wrap(self.R))
 
 
         if self.lam_y != None:
@@ -334,9 +340,9 @@ class npDeePC:
                 self.Yp@self.g == self.y_ini + self.sig_y,
                 self.Uf@self.g == self.u,
                 self.Yf@self.g == self.y,
-                cp.abs(self.u) <= self.u_constraints,
-                cp.abs(self.y) <= self.y_constraints,
-                self.u[::3] >= 0
+                self.u <= self.u_upper, self.u >= self.u_lower,
+                self.y <= self.y_upper, self.y >= self.y_lower
+                # self.u[::3] >= 0
                 # self.y[-self.p:] == ref[-self.p:]
             ]
         else:
@@ -345,9 +351,9 @@ class npDeePC:
                 self.Yp@self.g == self.y_ini,
                 self.Uf@self.g == self.u,
                 self.Yf@self.g == self.y,
-                cp.abs(self.u) <= self.u_constraints,
-                cp.abs(self.y) <= self.y_constraints,
-                self.u[::3] >= 0 # only for rocket
+                self.u <= self.u_upper, self.u >= self.u_lower,
+                self.y <= self.y_upper, self.y >= self.y_lower
+                # self.u[::3] >= 0 # only for rocket
                 # self.y[-self.p:] == ref[-self.p:]
             ]
 
@@ -359,7 +365,7 @@ class npDeePC:
 
         self.problem = cp.Problem(cp.Minimize(self.cost), self.constraints)
 
-    def solve(self, ref, u_ini, y_ini, verbose=False, solver=cp.MOSEK) -> np.ndarray:
+    def solve(self, y_ref, u_ref, u_ini, y_ini, verbose=False, solver=cp.MOSEK) -> np.ndarray:
         
         """
         Call once the controller is set up with relevenat parameters.
@@ -372,7 +378,8 @@ class npDeePC:
         # prob = cp.Problem(cp.Minimize(self.cost), self.constraints)
         # assert prob.is_dpp()
         # assert prob.is_dcp()
-        self.ref.value = ref
+        self.y_ref.value = y_ref
+        self.u_ref.value = u_ref
         self.u_ini.value = u_ini
         self.y_ini.value = y_ini
         self.problem.solve(solver=solver, verbose=verbose)
@@ -389,30 +396,33 @@ class npMPC:
         self.p = B.shape[0] 
         self.N = N
         self.m = B.shape[1]
-        self.y_constraints = y_constraints
-        self.u_constraints = u_constraints
-        self.A = A
-        self.B = B
+        self.y_lower = y_constraints[0]
+        self.y_upper = y_constraints[1]
+        self.u_lower= u_constraints[0]
+        self.u_upper = u_constraints[1]
+        self.A = cp.Parameter(A.shape)
+        self.B = cp.Parameter(B.shape)
         self.Q = Q
         self.R = R
-
+        self.A.value = A
+        self.B.value = B
         # Initialise Optimisation variables and parameters
         self.u = cp.Variable(self.N*self.m)
         self.y = cp.Variable(self.N*self.p)
-        self.ref = cp.Parameter((self.N*self.p,))
+        self.y_ref = cp.Parameter((self.N*self.p,))
+        self.u_ref = cp.Parameter((self.N*self.m,))
         self.y_ini = cp.Parameter(self.p)
 
     def setup(self):
 
         self.Q = np.kron(np.eye(self.N), self.Q)
         self.R = np.kron(np.eye(self.N), self.R)
-        self.cost = cp.quad_form(self.y-self.ref, cp.psd_wrap(self.Q)) + cp.quad_form(self.u, cp.psd_wrap(self.R))
-
+        self.cost = cp.quad_form(self.y-self.y_ref, cp.psd_wrap(self.Q)) + cp.quad_form(self.u-self.u_ref, cp.psd_wrap(self.R))
+        
         self.constraints = [
             self.y[:self.p] == self.y_ini,
-            cp.abs(self.u) <= self.u_constraints,
-            cp.abs(self.y) <= self.y_constraints,
-            self.u[::3] >= 0 # only for rocket
+            self.u <= self.u_upper, self.u >= self.u_lower,
+            self.y <= self.y_upper, self.y >= self.y_lower
         ]
 
         for i in range(1,self.N):
@@ -422,8 +432,9 @@ class npMPC:
 
         self.problem = cp.Problem(cp.Minimize(self.cost), self.constraints)
     
-    def solve(self, ref, y_ini, verbose=False, solver=cp.MOSEK) -> np.ndarray:
-        self.ref.value = ref
+    def solve(self, y_ref, u_ref, y_ini, verbose=False, solver=cp.MOSEK) -> np.ndarray:
+        self.y_ref.value = y_ref
+        self.u_ref.value = u_ref
         self.y_ini.value = y_ini
         self.problem.solve(solver=solver, verbose=verbose)
         action = self.problem.variables()[1].value[:self.m]

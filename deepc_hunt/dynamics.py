@@ -15,7 +15,7 @@ class RocketDx(nn.Module):
         u = [F_E, F_s, phi]
     """
 
-    def __init__(self):
+    def __init__(self, true_model=True):
         super().__init__()
         
         # Params from the COCO rocket lander env
@@ -24,7 +24,7 @@ class RocketDx(nn.Module):
         self.const: float = (self.lander_scaling**3)/(self.scale**3)
         self.nozzle_torque = 500*self.lander_scaling
         self.nozzle_inertia = 0.21696986258029938
-
+        self.true_model = true_model
         self.Ts : float = 1/60
         self.g = 9.81
         self.mass = 530.4058532714844 # kg
@@ -35,6 +35,10 @@ class RocketDx(nn.Module):
         self.l1 : float = 2.8466666666666667
         self.l2 : float = 2.1350000000000002
         self.ln : float = 0
+
+        if not true_model:
+            self.l1, self.l2 = self.l2, self.l1
+            self.mass = self.mass/2
 
         self.state_shape = 6
         self.action_shape = 3
@@ -77,7 +81,7 @@ class RocketDx(nn.Module):
             -u_eq[1] * np.sin(x_eq[4]) - u_eq[0] * np.cos(x_eq[4] + u_eq[2])
         ) / self.mass
         a34 = (
-            +u_eq[1] * np.cos(x_eq[4]) - u_eq[0] * np.sin(x_eq[4] + u_eq[2])
+            u_eq[1] * np.cos(x_eq[4]) - u_eq[0] * np.sin(x_eq[4] + u_eq[2])
         ) / self.mass
 
         # linearized input dynamics
@@ -131,6 +135,8 @@ class RocketDx(nn.Module):
             A = scipy.linalg.expm(A * self.Ts)
 
         return A, B
+    
+
 class Env(nn.Module):
 
     def __init__(self, f, discrete=False, Ts=None):
