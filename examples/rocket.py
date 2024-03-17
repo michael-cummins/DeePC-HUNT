@@ -75,13 +75,14 @@ if __name__ == '__main__':
         ).setup() for k, (A, B) in matrices.items()
     }
 
-    policies = {**mpc_policies, **deepc_policies}
+    policies = {**deepc_policies, **mpc_policies}
     # policies = deepc_policies
 
     """ 
     Run simulations for cost and success rate
     """
     
+    max_steps = 1000
     samples = 50
     costs = {}
     successful = {}
@@ -127,6 +128,7 @@ if __name__ == '__main__':
             
             touched_ground = False
             done = False
+            step = 0
             
             while not done:
                 
@@ -152,6 +154,8 @@ if __name__ == '__main__':
                 next_obs, rewards, done, _, info = env.step(action)
                 obs = next_obs
                 costs[name][i] += np.linalg.norm(Q@(obs[:6]-deepc_reference[:6])) + np.linalg.norm(R@(action-uref[:3]))
+                step += 1
+                if step >= max_steps: break
 
             if obs[6] and obs[7] and obs[1]>=landing_position[1]: 
                 successful[name].append(1)
