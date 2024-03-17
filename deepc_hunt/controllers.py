@@ -366,7 +366,7 @@ class npDeePC:
         self.problem = cp.Problem(cp.Minimize(self.cost), self.constraints)
         return self
 
-    def solve(self, y_ref, u_ref, u_ini, y_ini, verbose=False, solver=cp.ECOS) -> np.ndarray:
+    def solve(self, y_ref, u_ref, u_ini, y_ini, verbose=False, solver=cp.MOSEK) -> np.ndarray:
         
         """
         Call once the controller is set up with relevenat parameters.

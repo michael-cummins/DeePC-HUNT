@@ -10,6 +10,7 @@ import pickle
 import matplotlib.pyplot as plt
 import gymnasium as gym
 from tqdm import tqdm
+import random
 import coco_rocket_lander  # need to import to call gym.make()
 from coco_rocket_lander.env import SystemModel
 
@@ -23,7 +24,6 @@ if __name__ == '__main__':
     n = 6 # states
     m = 3 # inputs
     p = 6 # outputs
-
     Tini = 1 # number of past measurements (also called T_ini)
     Tf = 10 # number of future measurements (also called K)
     device = 'cuda' if torch.cuda.is_available() else 'cpu'
@@ -86,9 +86,11 @@ if __name__ == '__main__':
     samples = 50
     costs = {}
     successful = {}
-    np.random.seed(42)
-    seeds = np.uint8(np.random.uniform(low=1,high=99,size=(samples,)))
-
+    random.seed(42)
+    seeds = random.sample(range(1,99),samples)
+    # seeds = np.uint8(np.random.uniform(low=1,high=99,size=(samples,)))
+    # print(seeds)
+    # exit()
     for name, policy in policies.items():
         pbar = tqdm(range(samples))
         pbar.set_description(name)
@@ -103,7 +105,8 @@ if __name__ == '__main__':
             initial_position = (
                     np.random.uniform(low=0.2,high=0.8), 
                     np.random.uniform(low=0.7, high=0.9), 
-                    np.random.uniform(low=-0.1, high=0.1)
+                    # np.random.uniform(low=-0.1, high=0.1)
+                    0
                 )
             args = {"initial_position": initial_position}
             env = gym.make(
@@ -128,6 +131,7 @@ if __name__ == '__main__':
             
             touched_ground = False
             done = False
+            broke = False
             step = 0
             
             while not done:
@@ -145,7 +149,9 @@ if __name__ == '__main__':
                             y_ini=y_past_sim[-p:],
                             u_ini=u_past_sim,
                         )
-                    except: break
+                    except:
+                        broke = True 
+                        break
                 
                 # store input & output for DeePC
                 u_past_sim = np.append(u_past_sim[3:], action)
@@ -157,29 +163,18 @@ if __name__ == '__main__':
                 step += 1
                 if step >= max_steps: break
 
+            x_0 = np.array(initial_position).round(2)
             if obs[6] and obs[7] and obs[1]>=landing_position[1]: 
                 successful[name].append(1)
                 plt.imshow(fig)
-                plt.title(f'Success: {1}')
+                plt.title(f'{x_0} - ({1}) - broke: {broke}')
             else: 
                 successful[name].append(0)
                 plt.imshow(fig)
-                plt.title(f'Success: {0}')
+                plt.title(f'{x_0} - ({0}) - broke: {broke}')
             plt.savefig(f'final_pos/{name}/{i}.png')
 
             with open('success_dict.pkl', 'wb') as f:
                 pickle.dump(successful, f)
             with open('costs_dict.pkl', 'wb') as f:
                 pickle.dump(costs, f)
-
-    # print(f'Landing pos: {landing_position}')
-    print(successful)
-    print(costs)
-
-
-    # with open('success_dict.pkl', 'rb') as f:
-    #     successful = pickle.load(f)
-    # with open('costs_dict.pkl', 'rb') as f:
-    #     costs = pickle.load(f)
-    # print(successful)
-    # print(costs)
