@@ -364,8 +364,9 @@ class npDeePC:
         assert self.cost.is_dpp
 
         self.problem = cp.Problem(cp.Minimize(self.cost), self.constraints)
+        return self
 
-    def solve(self, y_ref, u_ref, u_ini, y_ini, verbose=False, solver=cp.MOSEK) -> np.ndarray:
+    def solve(self, y_ref, u_ref, u_ini, y_ini, verbose=False, solver=cp.ECOS) -> np.ndarray:
         
         """
         Call once the controller is set up with relevenat parameters.
@@ -431,8 +432,9 @@ class npMPC:
             )
 
         self.problem = cp.Problem(cp.Minimize(self.cost), self.constraints)
+        return self
     
-    def solve(self, y_ref, u_ref, y_ini, verbose=False, solver=cp.MOSEK) -> np.ndarray:
+    def solve(self, y_ref, u_ref, y_ini, u_ini=None, verbose=False, solver=cp.OSQP) -> np.ndarray:
         self.y_ref.value = y_ref
         self.u_ref.value = u_ref
         self.y_ini.value = y_ini
