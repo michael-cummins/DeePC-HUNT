@@ -85,6 +85,7 @@ if __name__ == '__main__':
     samples = 50
     costs = {}
     successful = {}
+    np.random.seed(42)
     seeds = np.uint8(np.random.uniform(low=1,high=99,size=(samples,)))
 
     for name, policy in policies.items():
@@ -99,9 +100,9 @@ if __name__ == '__main__':
             # Start Simulator
             np.random.seed(seeds[i])
             initial_position = (
-                    np.random.uniform(low=0.1,high=0.9), 
+                    np.random.uniform(low=0.2,high=0.8), 
                     np.random.uniform(low=0.7, high=0.9), 
-                    np.random.uniform(low=-0.15, high=0.15)
+                    np.random.uniform(low=-0.1, high=0.1)
                 )
             args = {"initial_position": initial_position}
             env = gym.make(
@@ -130,10 +131,10 @@ if __name__ == '__main__':
             while not done:
                 
                 # Get control action
-                if((obs[6] and obs[7])): # if both sensors touch the ground, stop
+                if((obs[6] and obs[7]) or touched_ground): # if both sensors touch the ground, stop
                     action = stop_u
-                    # print(action)
-                    # touched_ground = True
+                    # Ensures that we never turn engine bacl on
+                    touched_ground = True
                 else:
                     # action = stop_u
                     try:
@@ -147,14 +148,21 @@ if __name__ == '__main__':
                 # store input & output for DeePC
                 u_past_sim = np.append(u_past_sim[3:], action)
                 y_past_sim = np.append(y_past_sim, obs[0:6])
+                fig = env.render()
                 next_obs, rewards, done, _, info = env.step(action)
                 obs = next_obs
                 costs[name][i] += np.linalg.norm(Q@(obs[:6]-deepc_reference[:6])) + np.linalg.norm(R@(action-uref[:3]))
 
-            # print(f'obs:{obs}')
-            if obs[6] and obs[7] and obs[1]>=landing_position[1]: successful[name].append(1)
-            else: successful[name].append(0)
-            
+            if obs[6] and obs[7] and obs[1]>=landing_position[1]: 
+                successful[name].append(1)
+                plt.imshow(fig)
+                plt.title(f'Success: {1}')
+            else: 
+                successful[name].append(0)
+                plt.imshow(fig)
+                plt.title(f'Success: {0}')
+            plt.savefig(f'final_pos/{name}/{i}.png')
+
             with open('success_dict.pkl', 'wb') as f:
                 pickle.dump(successful, f)
             with open('costs_dict.pkl', 'wb') as f:

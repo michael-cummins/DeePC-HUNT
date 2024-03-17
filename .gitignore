@@ -9,3 +9,4 @@ deepc_hunt/__pycache__/
 .vscode
 .pytest_cache/
 archive/
+examples/final_pos/
