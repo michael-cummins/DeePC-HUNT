@@ -5,6 +5,7 @@ with open('success_dict.pkl', 'rb') as f:
     successful = pickle.load(f)
 with open('costs_dict.pkl', 'rb') as f:
     costs = pickle.load(f)
+    
 print(successful)
 print(costs)
 

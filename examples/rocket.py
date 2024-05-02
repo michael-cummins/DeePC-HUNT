@@ -1,9 +1,6 @@
-import torch.nn as nn
-from numpy import genfromtxt
 import numpy as np
 import torch
-from deepc_hunt.dynamics import CartpoleDx, RocketDx
-from deepc_hunt import DeePC, Trainer
+from deepc_hunt.dynamics import RocketDx
 from deepc_hunt.controllers import npDeePC, npMPC
 from deepc_hunt.utils import tensor2np
 import pickle
@@ -12,7 +9,6 @@ import gymnasium as gym
 from tqdm import tqdm
 import random
 import coco_rocket_lander  # need to import to call gym.make()
-from coco_rocket_lander.env import SystemModel
 
 if __name__ == '__main__':
 
@@ -32,8 +28,6 @@ if __name__ == '__main__':
     ud = np.genfromtxt('data/rocket_ud.csv', delimiter=',')
     yd = np.genfromtxt('data/rocket_yd.csv', delimiter=',')
 
-    # y_constraints = np.ones(Tf*p)*1e5 #Unconstrained
-    # u_constraints = np.ones(Tf*m)
     y_upper = np.kron(np.ones(Tf), np.array([33,26.6,100,100,0.6,100]))
     y_lower = np.kron(np.ones(Tf), np.array([0,7,-100,-100,-0.6,-100]))
     u_upper = np.kron(np.ones(Tf), np.array([1,1,1]))
@@ -76,7 +70,6 @@ if __name__ == '__main__':
     }
 
     policies = {**deepc_policies, **mpc_policies}
-    # policies = deepc_policies
 
     """ 
     Run simulations for cost and success rate
@@ -88,9 +81,7 @@ if __name__ == '__main__':
     successful = {}
     random.seed(42)
     seeds = random.sample(range(1,99),samples)
-    # seeds = np.uint8(np.random.uniform(low=1,high=99,size=(samples,)))
-    # print(seeds)
-    # exit()
+
     for name, policy in policies.items():
         pbar = tqdm(range(samples))
         pbar.set_description(name)
@@ -103,11 +94,10 @@ if __name__ == '__main__':
             # Start Simulator
             np.random.seed(seeds[i])
             initial_position = (
-                    np.random.uniform(low=0.2,high=0.8), 
-                    np.random.uniform(low=0.7, high=0.9), 
-                    # np.random.uniform(low=-0.1, high=0.1)
-                    0
-                )
+                np.random.uniform(low=0.2,high=0.8), 
+                np.random.uniform(low=0.7, high=0.9), 
+                0
+            )
             args = {"initial_position": initial_position}
             env = gym.make(
                 "coco_rocket_lander/RocketLander-v0", 
@@ -139,10 +129,10 @@ if __name__ == '__main__':
                 # Get control action
                 if((obs[6] and obs[7]) or touched_ground): # if both sensors touch the ground, stop
                     action = stop_u
-                    # Ensures that we never turn engine bacl on
+                    # Ensures that we never turn engine back on
                     touched_ground = True
                 else:
-                    # action = stop_u
+                    # In case the solver fails
                     try:
                         action, _ = policy.solve(
                             y_ref=deepc_reference, u_ref=uref,
@@ -178,3 +168,16 @@ if __name__ == '__main__':
                 pickle.dump(successful, f)
             with open('costs_dict.pkl', 'wb') as f:
                 pickle.dump(costs, f)
+
+    """
+    Display results
+    """
+
+    with open('success_dict.pkl', 'rb') as f:
+        successful = pickle.load(f)
+    with open('costs_dict.pkl', 'rb') as f:
+        costs = pickle.load(f)
+
+    for name, key in successful.items():
+        print(f'Success rates for {name}: {sum(key)/len(key)}')
+        print(f'Average cpst if landed for {name}: {np.dot(np.array(key),np.array(costs[name]))/sum(key)}')
