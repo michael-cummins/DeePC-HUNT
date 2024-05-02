@@ -26,14 +26,17 @@ class RocketDx(nn.Module):
 
         self.Ts : float = 1/60
         self.g = 9.81
-        self.mass = 530.4058532714844/2 # kg
+        # self.mass = 530.4058532714844/2 # kg
+        self.mass = 530.4058532714844 # kg
         self.main_engine_thrust = 16118.518518518518
         self.side_engine_thrust = 322.3703703703704
+        # self.inertia = 1209.53515625*2
         self.inertia = 1209.53515625
         self.max_nozzle_angle: float = 0.2617993877991494
+        # self.l1 : float = 2.8466666666666667/2
         self.l1 : float = 2.8466666666666667
-        self.l2 : float = 2.8466666666666667
-        # self.l2 : float = 2.1350000000000002
+        # self.l2 : float = 2.8466666666666667
+        self.l2 : float = 2.1350000000000002
         self.ln : float = 0
 
     def forward(self, x: torch.Tensor, u: torch.Tensor) -> torch.Tensor:

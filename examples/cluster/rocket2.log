@@ -122,3 +122,49 @@
 009 (14759477.000.000) 2024-02-19 12:41:07 Job was aborted.
 	via condor_rm (by user mcummins)
 ...
+000 (14760986.000.000) 2024-02-19 18:21:05 Job submitted from host: <10.15.2.1:9618?PrivAddr=%3c172.22.0.101:9618%3fsock%3dschedd_41397_7a2b%3e&PrivNet=internal.cluster.is.localnet&addrs=10.15.2.1-9618&alias=sched.cluster.is.localnet&noUDP&sock=schedd_41397_7a2b>
+...
+001 (14760986.000.000) 2024-02-19 18:21:30 Job executing on host: <172.22.2.58:9618?addrs=172.22.2.58-9618&alias=g058.internal.cluster.is.localnet&noUDP&sock=startd_4257_86c1>
+...
+006 (14760986.000.000) 2024-02-19 18:21:38 Image size of job updated: 3006636
+	219  -  MemoryUsage of job (MB)
+	224088  -  ResidentSetSize of job (KB)
+...
+006 (14760986.000.000) 2024-02-19 18:26:38 Image size of job updated: 6675512
+	3486  -  MemoryUsage of job (MB)
+	3569536  -  ResidentSetSize of job (KB)
+...
+006 (14760986.000.000) 2024-02-19 18:31:38 Image size of job updated: 6700856
+	3511  -  MemoryUsage of job (MB)
+	3594480  -  ResidentSetSize of job (KB)
+...
+006 (14760986.000.000) 2024-02-19 18:36:39 Image size of job updated: 6704052
+	3513  -  MemoryUsage of job (MB)
+	3597172  -  ResidentSetSize of job (KB)
+...
+006 (14760986.000.000) 2024-02-19 18:41:40 Image size of job updated: 6716300
+	3526  -  MemoryUsage of job (MB)
+	3609924  -  ResidentSetSize of job (KB)
+...
+006 (14760986.000.000) 2024-02-19 18:46:40 Image size of job updated: 6717880
+	3528  -  MemoryUsage of job (MB)
+	3611692  -  ResidentSetSize of job (KB)
+...
+005 (14760986.000.000) 2024-02-19 19:03:09 Job terminated.
+	(1) Normal termination (return value 0)
+		Usr 0 00:40:54, Sys 0 00:00:34  -  Run Remote Usage
+		Usr 0 00:00:00, Sys 0 00:00:00  -  Run Local Usage
+		Usr 0 00:40:54, Sys 0 00:00:34  -  Total Remote Usage
+		Usr 0 00:00:00, Sys 0 00:00:00  -  Total Local Usage
+	0  -  Run Bytes Sent By Job
+	0  -  Run Bytes Received By Job
+	0  -  Total Bytes Sent By Job
+	0  -  Total Bytes Received By Job
+	Partitionable Resources :    Usage  Request Allocated 
+	   Cpus                 :     1.00        1         1 
+	   Disk (KB)            :  7500        7500   1651175 
+	   Gpus (Average)       :                 0         0 
+	   Memory (MB)          :  3528      128096    128128 
+
+	Job terminated of its own accord at 2024-02-19T18:03:09Z with exit-code 0.
+...

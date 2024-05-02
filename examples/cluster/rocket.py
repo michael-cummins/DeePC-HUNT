@@ -41,8 +41,9 @@ if __name__ == '__main__':
     controller = DeePC(
         ud=ud, yd=yd, u_constraints=u_constraints, y_constraints=y_constraints,
         Tini=Tini, N=Tf, m=m, p=p, n_batch=n_batch, device=device,
-        linear=False, stochastic_y=True, stochastic_u=False, q=q, r=r
-        # lam_g1=torch.Tensor([1e-5]), lam_g2=torch.Tensor([10]), lam_y=torch.Tensor([1e5])
+        linear=False, stochastic_y=True, stochastic_u=False, q=q, r=r,
+        # lam_g1=torch.Tensor([1e-5]), lam_g2=torch.Tensor([10]), 
+        lam_y=torch.Tensor([1e5])
     ).to(device)
 
     epochs = 100

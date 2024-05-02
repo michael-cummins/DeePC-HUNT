@@ -158,6 +158,7 @@ class DeePC(nn.Module):
         ]
         constraints.append(self.Up@g == u_ini + sig_u) if self.stochastic_u else constraints.append(self.Up@g == u_ini)
         constraints.append(self.Yp@g == y_ini + sig_y) if self.stochastic_y else constraints.append(self.Yp@g == y_ini)
+        
         # Initialise optimization problem
         problem = cp.Problem(cp.Minimize(cost), constraints)
         assert problem.is_dcp()

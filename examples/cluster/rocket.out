@@ -1,1 +1,6 @@
 225
+Name : lam_g1, Value : tensor([0.7120])
+Name : lam_g2, Value : tensor([3.4715])
+{'lam_g1': Parameter containing:
+tensor([0.7120], requires_grad=True), 'lam_g2': Parameter containing:
+tensor([3.4715], requires_grad=True)}
