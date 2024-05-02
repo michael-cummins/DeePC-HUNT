@@ -10,3 +10,12 @@ deepc_hunt/__pycache__/
 .pytest_cache/
 archive/
 examples/final_pos/
+
+*.sub
+*.out
+*.err
+*.log
+*/subs
+*/errs
+*/outs
+*/logs
