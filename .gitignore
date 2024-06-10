@@ -9,3 +9,13 @@ deepc_hunt/__pycache__/
 .vscode
 .pytest_cache/
 archive/
+examples/final_pos/
+
+*.sub
+*.out
+*.err
+*.log
+*/subs
+*/errs
+*/outs
+*/logs
