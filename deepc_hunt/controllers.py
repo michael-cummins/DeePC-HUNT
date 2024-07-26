@@ -156,13 +156,11 @@ class DeePC(nn.Module):
             self.Yf@g == self.y,
             self.u <= self.u_upper, self.u >= self.u_lower,
             self.y <= self.y_upper, self.y >= self.y_lower
-            # self.u[::3] >= 0 # Just for rocket
-            # self.y[-self.p:] == ref[-self.p:]
         ]
-        print(f'length of constraints before noise : {len(constraints)}')
+        
         constraints.append(self.Up@g == u_ini + sig_u) if self.stochastic_u else constraints.append(self.Up@g == u_ini)
         constraints.append(self.Yp@g == y_ini + sig_y) if self.stochastic_y else constraints.append(self.Yp@g == y_ini)
-        print(f'length of constraints after noise : {len(constraints)}')
+        
         # Initialise optimization problem
         problem = cp.Problem(cp.Minimize(cost), constraints)
         assert problem.is_dcp()
@@ -342,8 +340,6 @@ class npDeePC:
                 self.Yf@self.g == self.y,
                 self.u <= self.u_upper, self.u >= self.u_lower,
                 self.y <= self.y_upper, self.y >= self.y_lower
-                # self.u[::3] >= 0
-                # self.y[-self.p:] == ref[-self.p:]
             ]
         else:
             self.constraints = [
@@ -353,8 +349,6 @@ class npDeePC:
                 self.Yf@self.g == self.y,
                 self.u <= self.u_upper, self.u >= self.u_lower,
                 self.y <= self.y_upper, self.y >= self.y_lower
-                # self.u[::3] >= 0 # only for rocket
-                # self.y[-self.p:] == ref[-self.p:]
             ]
 
         if self.lam_g1 != None:
