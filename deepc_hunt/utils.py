@@ -107,4 +107,6 @@ class Projection(object):
 
 
 def tensor2np(tensor : torch.Tensor) -> np.ndarray:
-    return tensor.detach().cpu().numpy()
+    if torch.is_tensor(tensor):
+        return tensor.detach().cpu().numpy()
+    else: return tensor
