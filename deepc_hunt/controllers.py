@@ -14,7 +14,8 @@ class DeePC(nn.Module):
     Differentiable DeePC Module
     """
 
-    def __init__(self, ud: np.array, yd: np.array, y_constraints: np.array, u_constraints: np.array, 
+    def __init__(self, ud: np.ndarray, yd: np.ndarray, 
+                 y_constraints: Tuple[np.ndarray, np.ndarray], u_constraints: Tuple[np.ndarray, np.ndarray], 
                  N: int, Tini: int, p: int, m: int, device : str,
                  stochastic_y=False, stochastic_u=False, linear=True, n_batch=1,
                  q=None, r=None, lam_y=None, lam_g1=None, lam_g2=None, lam_u=None):
@@ -29,12 +30,14 @@ class DeePC(nn.Module):
             - u_constraints : State-wise Constraints on input signal
             - N : Future Time horizon
             - Tini : Initial time horizon
-            - T : Length of data
             - p : Dimension of output signal
             - m : Dimension of input signal
 
             - stochastic : Set true if noise if output signals contain noise
             - linear : Set true if input and putput signals are collected from a linear system
+
+            - u_constraints : Tuple of (upper constraints, lower constraints) with shape (2, N*m)
+            - y_constraints : Tuple of (upper constraints, lower constraints) with shape (2, N*p)
 
             - q : vector of diagonal elemetns of Q,
                 if passed as none -> randomly initialise as torch parameter in R^p
@@ -49,7 +52,6 @@ class DeePC(nn.Module):
         """
         
         self.T = ud.shape[0]
-        print(self.T)
         self.ud = ud
         self.yd = yd
         self.Tini = Tini
@@ -120,7 +122,8 @@ class DeePC(nn.Module):
         # Initialise Optimisation variables
         g = cp.Variable(self.T-self.Tini-self.N+1)
         self.y = cp.Variable(N*p)
-        e = cp.Variable(N*p)
+        ey = cp.Variable(N*p)
+        eu = cp.Variable(N*m)
         self.u = cp.Variable(N*m)
         sig_y = cp.Variable(self.Tini*self.p) 
         sig_u = cp.Variable(self.Tini*self.m) 
@@ -135,10 +138,11 @@ class DeePC(nn.Module):
         l_y = cp.Parameter(shape=(1,), nonneg=True)
         l_u = cp.Parameter(shape=(1,), nonneg=True)
         Q_block_sqrt, R_block_sqrt = cp.Parameter((p*N,p*N)), cp.Parameter((m*N,m*N))
-        ref = cp.Parameter((N*p,))
+        yref = cp.Parameter((N*p,))
+        uref = cp.Parameter((N*m,))
         
         u_ini, y_ini = cp.Parameter(Tini*m), cp.Parameter(Tini*p)
-        cost = cp.sum_squares(cp.psd_wrap(Q_block_sqrt) @ e) + cp.sum_squares(cp.psd_wrap(R_block_sqrt) @ self.u)
+        cost = cp.sum_squares(cp.psd_wrap(Q_block_sqrt) @ ey) + cp.sum_squares(cp.psd_wrap(R_block_sqrt) @ eu)
         assert cost.is_dpp()
 
         # Set constraints and cost function according to system (nonlinear / stochastic)
@@ -151,7 +155,8 @@ class DeePC(nn.Module):
         assert cost.is_dpp()
 
         constraints = [
-            e == self.y - ref,  # necessary for paramaterized programming
+            ey == self.y - yref,  # necessary for paramaterized programming
+            eu == self.u - uref,  # necessary for paramaterized programming
             self.Uf@g == self.u,
             self.Yf@g == self.y,
             self.u <= self.u_upper, self.u >= self.u_lower,
@@ -166,8 +171,8 @@ class DeePC(nn.Module):
         assert problem.is_dcp()
         assert problem.is_dpp()
 
-        variables = [g, e, self.u, self.y]
-        params = [Q_block_sqrt, R_block_sqrt, u_ini, y_ini, ref]
+        variables = [self.u, self.y, g, ey, eu]
+        params = [Q_block_sqrt, R_block_sqrt, u_ini, y_ini, yref, uref]
         
         if not linear:
             params.append(l_g1)
@@ -183,7 +188,7 @@ class DeePC(nn.Module):
 
         self.QP_layer = CvxpyLayer(problem=problem, parameters=params, variables=variables)
     
-    def forward(self, ref: torch.Tensor, uref: torch.Tensor, u_ini: torch.Tensor, y_ini: torch.Tensor) -> list[torch.Tensor]:
+    def forward(self, yref: torch.Tensor, uref: torch.Tensor, u_ini: torch.Tensor, y_ini: torch.Tensor) -> list[torch.Tensor]:
 
         """
         Forward call
@@ -197,31 +202,33 @@ class DeePC(nn.Module):
             output : optimal output signal
             cost : optimal cost
         """
-        if uref == None: uref = torch.zeros(self.N*self.m).repeat(self.n_batch, 1).to(self.device)
-        if ref == None: ref = torch.zeros(self.N*self.p).repeat(self.n_batch, 1).to(self.device)
 
         # Construct Q and R matrices 
-        if u_ini.ndim > 1 or y_ini.ndim > 1 or ref.ndim > 1:
+        if u_ini.ndim > 1 or y_ini.ndim > 1:
             Q = torch.diag(torch.kron(torch.ones(self.N).to(self.device), torch.sqrt(self.q))).repeat(self.n_batch, 1, 1).to(self.device)
             R = torch.diag(torch.kron(torch.ones(self.N).to(self.device), torch.sqrt(self.r))).repeat(self.n_batch, 1, 1).to(self.device)
         else :
             Q = torch.diag(torch.kron(torch.ones(self.N).to(self.device), torch.sqrt(self.q))).to(self.device)
             R = torch.diag(torch.kron(torch.ones(self.N).to(self.device), torch.sqrt(self.r))).to(self.device)
 
-        params = [Q, R, u_ini, y_ini, ref]
+        params = [Q, R, u_ini, y_ini, yref, uref]
         
         # Add paramters and system
         if not self.linear:
-            params.append(self.lam_g1)
+            params.append(self.lam_g1.repeat(self.n_batch,1))
             params.append(self.lam_g2.repeat(self.n_batch,1))
         if self.stochastic_y:
             params.append(self.lam_y.repeat(self.n_batch,1))
         if self.stochastic_u:
             params.append(self.lam_u.repeat(self.n_batch,1))
 
-        out = self.QP_layer(*params, solver_args={"solve_method": "ECOS"})
-        g, input, output = out[0], out[2], out[3]
-        vars = [g, input, output]
+        try:
+            out = self.QP_layer(*params, solver_args={"solve_method": "Clarabel"})
+        except:
+            out = self.QP_layer(*params, solver_args={"solve_method": "ECOS"})
+            
+        input, output = out[0], out[1]
+        vars = [input, output]
         
         if self.stochastic_y : vars.append(out[-2])
         if self.stochastic_u : vars.append(out[-1])
@@ -237,13 +244,13 @@ class DeePC(nn.Module):
 
     def initialise(self, lam_y=None, lam_u=None, lam_g1=None, lam_g2=None):
         if self.lam_g1 is not None:
-            self.lam_g1.data = torch.Tensor([lam_g1])
+            self.lam_g1.data = torch.Tensor([lam_g1]) + torch.randn((1,))*0.01
         if self.lam_g2 is not None:
-            self.lam_g2.data = torch.Tensor([lam_g2])
+            self.lam_g2.data = torch.Tensor([lam_g2]) + torch.randn((1,))*0.01
         if self.lam_y is not None:
-            self.lam_y.data = torch.Tensor([lam_y])
+            self.lam_y.data = torch.Tensor([lam_y]) + torch.randn((1,))*0.01
         if self.lam_u is not None:
-            self.lam_u.data = torch.Tensor([lam_u])
+            self.lam_u.data = torch.Tensor([lam_u]) + torch.randn((1,))*0.01
 
 
 class npDeePC:
@@ -252,7 +259,8 @@ class npDeePC:
     Vanilla regularized DeePC module
     """
 
-    def __init__(self, ud: np.ndarray, yd: np.ndarray, y_constraints: Tuple[np.ndarray], u_constraints: Tuple[np.ndarray], 
+    def __init__(self, ud: np.ndarray, yd: np.ndarray, 
+                 y_constraints: Tuple[np.ndarray, np.ndarray], u_constraints: Tuple[np.ndarray, np.ndarray], 
                  N: int, Tini: int, n: int, p: int, m: int) -> None:
        
         """
@@ -261,6 +269,7 @@ class npDeePC:
             ud = Inpiut signal data
             yd = output signal data
             N = predicition horizon
+            Tini = estimation horizon
             n = dimesnion of system
             p = output signla dimension
             m = input signal dimension
@@ -276,7 +285,7 @@ class npDeePC:
         self.y_upper = y_constraints[1]
         self.u_lower= u_constraints[0]
         self.u_upper = u_constraints[1]
-
+        self._solver_swtich = False
         # Check for full row rank
         H = block_hankel(w=ud.reshape((m*self.T,)), L=Tini+N+n, d=m)
         rank = np.linalg.matrix_rank(H)
@@ -366,26 +375,45 @@ class npDeePC:
         Call once the controller is set up with relevenat parameters.
         Returns the first action of input sequence.
         args:
-            solver = cvxpy solver, usually use MOSEK
+            solver = cvxpy solver, best is MOSEK but other good options are cp.ECOS, cp.CLARABEL and cp.OSQP
             verbose = bool for printing status of solver
         """
-
-        # prob = cp.Problem(cp.Minimize(self.cost), self.constraints)
-        # assert prob.is_dpp()
-        # assert prob.is_dcp()
+        if not self._solver_switch: self._solver = solver
         self.y_ref.value = y_ref
         self.u_ref.value = u_ref
         self.u_ini.value = u_ini
         self.y_ini.value = y_ini
-        self.problem.solve(solver=solver, verbose=verbose)
+        try:
+            self.problem.solve(solver=self._solver, verbose=verbose)
+        except:
+            # MOSEK requires license, switch if error occurs
+            # License is free for academics
+            self._solver_switch = True
+            self._solver = cp.ECOS
         action = self.problem.variables()[1].value[:self.m]
         obs = self.problem.variables()[0].value # For imitation loss
         return action, obs
     
 class npMPC:
 
-    def __init__(self, A: np.ndarray, B: np.ndarray, Q: np.ndarray, R: np.ndarray, 
-                 N: int, u_constraints: np.ndarray, y_constraints: np.ndarray) -> None:
+    """
+    Vanilla Linear MPC module using NumPy and CvxPy for efficient implementation
+    """
+
+    def __init__(self, A: np.ndarray, B: np.ndarray, Q: np.ndarray, R: np.ndarray, N: int, 
+                 u_constraints: Tuple[np.ndarray,np.ndarray], y_constraints: Tuple[np.ndarray,np.ndarray]) -> None:
+        
+        """
+        (A,B): Linear system Matrices
+        (Q,R): State and input cost matrices
+        N: Predicition horizon
+        u_constraints: have shape (2, dimension of input)
+            - u_constraints[0] should contain lower box constraints
+            - u_constraints[1] should contain upper box constraints
+        y_constraints: have shape (2, dimension of state)
+            - y_constraints[0] should contain lower box constraints
+            - y_constraints[1] should contain upper box constraints
+        """
         
         self.N = N
         self.p = B.shape[0] 
@@ -409,6 +437,9 @@ class npMPC:
         self.y_ini = cp.Parameter(self.p)
 
     def setup(self):
+        """
+        Call once to initialise the optimisation problem.
+        """
 
         self.Q = np.kron(np.eye(self.N), self.Q)
         self.R = np.kron(np.eye(self.N), self.R)
@@ -428,7 +459,13 @@ class npMPC:
         self.problem = cp.Problem(cp.Minimize(self.cost), self.constraints)
         return self
     
-    def solve(self, y_ref, u_ref, y_ini, u_ini=None, verbose=False, solver=cp.OSQP) -> np.ndarray:
+    def solve(self, y_ref: np.ndarray, u_ref: np.ndarray, y_ini: np.ndarray, 
+              u_ini=None, verbose=False, solver=cp.OSQP) -> np.ndarray:
+        """
+        Call to solve the MPC problem.
+        y_ref, u_ref, y_ini are instatiated as parameters of the optimisation problem. 
+        They only need to be passed to the solver rather than calling setup() again.
+        """
         self.y_ref.value = y_ref
         self.u_ref.value = u_ref
         self.y_ini.value = y_ini

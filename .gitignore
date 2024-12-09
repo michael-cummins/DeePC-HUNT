@@ -10,7 +10,7 @@ deepc_hunt/__pycache__/
 .pytest_cache/
 archive/
 examples/final_pos/
-examples/reproduce_paper
+examples/archive/
 examples/video/*.mp4
 examples/video/*.json
 *.sub

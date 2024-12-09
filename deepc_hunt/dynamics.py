@@ -136,53 +136,6 @@ class RocketDx(nn.Module):
 
         return A, B
     
-
-class Env(nn.Module):
-
-    def __init__(self, f, discrete=False, Ts=None):
-        if Ts is not None and discrete is True:
-            raise AssertionError('If not discrete, then you must supply a sample time Ts')
-        if discrete is True and Ts is not None:
-            raise AssertionError('Discrete does not require a sample time -> Ts=None')
-
-        self.Ts = Ts
-        self.discrete = discrete
-        self.f = f
-    
-    def f(x : torch.Tensor, u : torch.Tensor) -> torch.Tensor:
-        return x
-    
-    def forward(self, x : torch.Tensor, u : torch.Tensor) -> torch.Tensor:
-        
-        # x is shape (n_batch, p)
-        # u is shape (n_batch, m)
-
-        x_dim, u_dim = x.ndimension(), u.ndimension()
-        if x_dim == 1:
-            x = x.unsqueeze(0)
-        if u_dim == 1:
-            u = u.unsqueeze(0)
-
-        if self.discrete:
-            z = self.f(x, u)
-        else:
-            z = x + self.Ts*self.f(x, u)
-        
-        if x_dim == 1:
-            z = z.squeeze(0)
-        
-        return z
-class dynamics(Env):
-    def __init__(self, discrete=False, Ts=None):
-        super().__init__()
-        self.discrete = discrete
-        print(self.discrete)
-        self.A = torch.Tensor([[1.01, 0.01, 0.00], # A - State-space matrix
-                                [0.01, 1.01, 0.01], 
-                                [0.00, 0.01, 1.01]])
-    def f(self, x, u):
-        return x@self.A + u
-    
 class AffineDynamics(nn.Module):
     def __init__(self, A, B, c=None):
         super(AffineDynamics, self).__init__()
