@@ -10,7 +10,7 @@ Differentiable DeePC layer is inspired by [Differentiable MPC](https://github.co
 ## Installation
 Clone the repo and install from source
 ```
-cd DeePC-HUNT && pip install -e .
+cd DeePC-Hunt && pip install -e .
 ```
 Extra packages necessary for running the example notebooks are in examples/requirements.txt if needed.
 ```
@@ -25,25 +25,25 @@ DeePC-Hunt has the following dependencies.
 ## Usage
 Data-enabled Predictive Control ([DeePC](https://arxiv.org/abs/1811.05890)) is a data-driven non-parametric algorithm for combined identification (learning) and control of dynamical systems. It leverages the solution of the following optimization problem in a receding horizon fashion.
 
-![Problem Formulation](https://github.com/michael-cummins/DeePC-HUNT/blob/main/videos/DeePC.png)
+![Problem Formulation](https://github.com/michael-cummins/DeePC-Hunt/blob/main/videos/DeePC.png)
 
-DeePC can achieve performance that rivals MPC on non-linear and stochastic systems ([see here](https://arxiv.org/abs/2101.01273)) but is highly sensitive to the choice of regularization parameters $\theta_i$. DeePC-Hunt addresses this problem by automatically tuning these parameters. The performance of DeePC-Hunt has been validated on a [rocket lander](https://github.com/michael-cummins/DeePC-HUNT/examples/rocket.ipynb) modelling the falcon 9 and a [LTI](https://github.com/michael-cummins/DeePC-HUNT/examples/linear_deepc.ipynb) system. To run these example notebooks, you can clone this directory and open it in a VS-Code environment with the Jupyter Notebook extension
+DeePC can achieve performance that rivals MPC on non-linear and stochastic systems ([see here](https://arxiv.org/abs/2101.01273)) but is highly sensitive to the choice of regularization parameters $\theta_i$. DeePC-Hunt addresses this problem by automatically tuning these parameters. The performance of DeePC-Hunt has been validated on a [rocket lander](https://github.com/michael-cummins/DeePC-Hunt/examples/rocket.ipynb) modelling the falcon 9 and a [LTI](https://github.com/michael-cummins/DeePC-Hunt/examples/linear_deepc.ipynb) system. To run these example notebooks, you can clone this directory and open it in a VS-Code environment with the Jupyter Notebook extension
 
 ### Rocket - before training
 
-https://github.com/michael-cummins/DeePC-HUNT/assets/72135336/eacd384e-b69d-428e-aa3e-1b4e669a3485
+https://github.com/michael-cummins/DeePC-Hunt/assets/72135336/eacd384e-b69d-428e-aa3e-1b4e669a3485
 
 
 
 
 ### Rocket - after training (episode 70)
 
-After running DeePC-HUNT for 70 episodes, the controller now stabilizes the system.
+After running DeePC-Hunt for 70 episodes, the controller now stabilizes the system.
 
 
 
 
-https://github.com/michael-cummins/DeePC-HUNT/assets/72135336/b88aedf8-b816-4a89-a9ef-3bfa9b9c9d0b
+https://github.com/michael-cummins/DeePC-Hunt/assets/72135336/b88aedf8-b816-4a89-a9ef-3bfa9b9c9d0b
 
 ## Citing
 
