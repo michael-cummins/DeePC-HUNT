@@ -1,7 +1,7 @@
-# DeePC-HUNT
+# DeePC-Hunt
 ### Data-enabled predictive control hyperparameter tuning via differentiable optimization layers
 
-DeePC-HUNT is a method for optimising over the hyperparameters of DeePC using [analytical policy gradients](https://arxiv.org/abs/2202.00817) and [differentiable optimization layers](https://locuslab.github.io/2019-10-28-cvxpylayers/). This method has been developed as part of my bachelor thesis, carried out at the [Automatic Control Laboratory (IfA)](https://control.ee.ethz.ch/). Supervised by [Alberto Padoan](https://www.albertopadoan.com/), [Keith Moffat](https://www.keithmoffat.com/) and [Florian Dorfler](http://people.ee.ethz.ch/~floriand/). 
+DeePC-Hunt is a method for optimising over the hyperparameters of DeePC using [analytical policy gradients](https://arxiv.org/abs/2202.00817) and [differentiable optimization layers](https://locuslab.github.io/2019-10-28-cvxpylayers/). This method has been developed as part of my bachelor thesis, carried out at the [Automatic Control Laboratory (IfA)](https://control.ee.ethz.ch/). Supervised by [Alberto Padoan](https://www.albertopadoan.com/), [Keith Moffat](https://www.keithmoffat.com/) and [Florian Dorfler](http://people.ee.ethz.ch/~floriand/). 
 
 Developed in a conda environment on Ubuntu 22.04 with Python 3.10. 
 
@@ -17,7 +17,7 @@ Extra packages necessary for running the example notebooks are in examples/requi
 pip install -r examples/requirements.txt
 ```
 
-DeePC-HUNT has the following dependencies.
+DeePC-Hunt has the following dependencies.
 * Python3
 * [PyTorch](https://pytorch.org/) >= 1.0
 * [CvxpyLayers](https://github.com/cvxgrp/cvxpylayers) >= 1.0
@@ -27,7 +27,7 @@ Data-enabled Predictive Control ([DeePC](https://arxiv.org/abs/1811.05890)) is a
 
 ![Problem Formulation](https://github.com/michael-cummins/DeePC-HUNT/blob/main/videos/DeePC.png)
 
-DeePC can achieve performance that rivals MPC on non-linear and stochastic systems ([see here](https://arxiv.org/abs/2101.01273)) but is highly sensitive to the choice of regularization parameters $\theta_i$. DeePC-HUNT addresses this problem by automatically tuning these parameters. The performance of DeePC-HUNT has been validated on a [rocket lander](https://github.com/michael-cummins/DeePC-HUNT/examples/rocket.ipynb) modelling the falcon 9 and a [LTI](https://github.com/michael-cummins/DeePC-HUNT/examples/linear_deepc.ipynb) system. To run these example notebooks, you can clone this directory and open it in a VS-Code environment with the Jupyter Notebook extension
+DeePC can achieve performance that rivals MPC on non-linear and stochastic systems ([see here](https://arxiv.org/abs/2101.01273)) but is highly sensitive to the choice of regularization parameters $\theta_i$. DeePC-Hunt addresses this problem by automatically tuning these parameters. The performance of DeePC-Hunt has been validated on a [rocket lander](https://github.com/michael-cummins/DeePC-HUNT/examples/rocket.ipynb) modelling the falcon 9 and a [LTI](https://github.com/michael-cummins/DeePC-HUNT/examples/linear_deepc.ipynb) system. To run these example notebooks, you can clone this directory and open it in a VS-Code environment with the Jupyter Notebook extension
 
 ### Rocket - before training
 
@@ -45,4 +45,16 @@ After running DeePC-HUNT for 70 episodes, the controller now stabilizes the syst
 
 https://github.com/michael-cummins/DeePC-HUNT/assets/72135336/b88aedf8-b816-4a89-a9ef-3bfa9b9c9d0b
 
+### Citing
+
+If you use DeePC-Hunt in your research or found the ideas useful, please cite the [paper](https://arxiv.org/abs/2412.06481)
+
+```
+@article{cummins2024deepc,
+  title={DeePC-Hunt: Data-enabled Predictive Control Hyperparameter Tuning via Differentiable Optimization},
+  author={Cummins, Michael and Padoan, Alberto and Moffat, Keith and Dorfler, Florian and Lygeros, John},
+  journal={arXiv preprint arXiv:2412.06481},
+  year={2024}
+}
+```
 
