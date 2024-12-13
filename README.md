@@ -1,7 +1,7 @@
 # DeePC-Hunt
 ### Data-enabled predictive control hyperparameter tuning via differentiable optimization layers
 
-DeePC-Hunt is a method for optimising over the hyperparameters of DeePC using [analytical policy gradients](https://arxiv.org/abs/2202.00817) and [differentiable optimization layers](https://locuslab.github.io/2019-10-28-cvxpylayers/). This method has been developed as part of my bachelor thesis, carried out at the [Automatic Control Laboratory (IfA)](https://control.ee.ethz.ch/). Supervised by [Alberto Padoan](https://www.albertopadoan.com/), [Keith Moffat](https://www.keithmoffat.com/) and [Florian Dorfler](http://people.ee.ethz.ch/~floriand/). 
+DeePC-Hunt is a method for optimising over the hyperparameters of DeePC using [analytical policy gradients](https://arxiv.org/abs/2202.00817) and [differentiable optimization layers](https://locuslab.github.io/2019-10-28-cvxpylayers/). This method has been developed as part of my bachelor thesis, carried out at the [Automatic Control Laboratory (IfA)](https://control.ee.ethz.ch/). Supervised by [Alberto Padoan](https://www.albertopadoan.com/), [Keith Moffat](https://www.keithmoffat.com/) and [Florian Dorfler](http://people.ee.ethz.ch/~floriand/). A pre-print is available on [arxiv](https://arxiv.org/abs/2412.06481).
 
 Developed in a conda environment on Ubuntu 22.04 with Python 3.10. 
 
@@ -45,7 +45,7 @@ After running DeePC-HUNT for 70 episodes, the controller now stabilizes the syst
 
 https://github.com/michael-cummins/DeePC-HUNT/assets/72135336/b88aedf8-b816-4a89-a9ef-3bfa9b9c9d0b
 
-### Citing
+## Citing
 
 If you use DeePC-Hunt in your research or found the ideas useful, please cite the [paper](https://arxiv.org/abs/2412.06481)
 
